@@ -52,13 +52,16 @@ export default function ChecklistClient({
       .eq("id", id);
   };
 
-  const completedCount = items.filter((item) => item.completed).length;
-  const totalCount = items.length;
-  const progressPercent = totalCount
-    ? Math.round((completedCount / totalCount) * 100)
-    : 0;
-
   const sections = ["Daily", "Nightly Closing", "Weekly"];
+
+  const getSectionStats = (section: string) => {
+    const sectionItems = items.filter((item) => item.task_section === section);
+    const completed = sectionItems.filter((item) => item.completed).length;
+    const total = sectionItems.length;
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+
+    return { completed, total, percent };
+  };
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -85,20 +88,29 @@ export default function ChecklistClient({
           </a>
         </div>
 
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-sm text-gray-600">
-            <span>Daily Progress</span>
-            <span>
-              {completedCount} / {totalCount}
-            </span>
-          </div>
+        <div className="mt-5 space-y-4">
+          {sections.map((section) => {
+            const stats = getSectionStats(section);
+            if (stats.total === 0) return null;
 
-          <div className="h-4 w-full rounded-full bg-gray-200">
-            <div
-              className="h-4 rounded-full bg-green-500 transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+            return (
+              <div key={section}>
+                <div className="mb-1 flex justify-between text-sm text-gray-600">
+                  <span>{section} Progress</span>
+                  <span>
+                    {stats.completed} / {stats.total}
+                  </span>
+                </div>
+
+                <div className="h-4 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-4 rounded-full bg-green-500 transition-all"
+                    style={{ width: `${stats.percent}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
