@@ -6,8 +6,13 @@ export default async function ManagerPage(props: {
   searchParams?: SearchParams;
 }) {
   const resolvedParams = (await props.searchParams) || {};
-  const selectedDate =
-    resolvedParams.date || new Date().toISOString().split("T")[0];
+
+  const today = new Date().toISOString().split("T")[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = yesterdayDate.toISOString().split("T")[0];
+
+  const selectedDate = resolvedParams.date || yesterday;
 
   const { data, error } = await supabase
     .from("checklist_items")
@@ -43,6 +48,10 @@ export default async function ManagerPage(props: {
             Review completed and missed tasks by date
           </p>
 
+          <div className="mt-2 text-sm text-gray-500">
+            Today: {today} | Default report date: {selectedDate}
+          </div>
+
           <div className="mt-3">
             <a
               href="/"
@@ -75,6 +84,17 @@ export default async function ManagerPage(props: {
             View Date
           </button>
         </form>
+
+        {selectedDate === yesterday && missedTasks.length > 0 && (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h2 className="mb-2 text-2xl font-semibold text-amber-800">
+              Yesterday&apos;s Missed Tasks
+            </h2>
+            <p className="text-amber-900">
+              {missedTasks.length} task{missedTasks.length === 1 ? "" : "s"} not completed.
+            </p>
+          </section>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border bg-white p-4">

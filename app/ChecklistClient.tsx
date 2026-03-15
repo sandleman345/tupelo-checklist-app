@@ -20,11 +20,17 @@ export default function ChecklistClient({
 }) {
   const [items, setItems] = useState(initialItems);
 
+  const today = new Date().toISOString().split("T")[0];
+  const checklistDate = initialItems[0]?.checklist_date || today;
+  const isReadOnly = checklistDate !== today;
+
   const updateItem = async (
     id: number,
     field: keyof ChecklistItem,
     value: string | boolean | null
   ) => {
+    if (isReadOnly) return;
+
     const updatedItems = items.map((item) =>
       item.id === id ? { ...item, [field]: value } : item
     );
@@ -59,6 +65,16 @@ export default function ChecklistClient({
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
         <h1 className="text-3xl font-bold">Tupelo Tea Checklist</h1>
         <p className="text-gray-600">Check tasks and enter initials</p>
+
+        <div className="mt-2 text-sm text-gray-500">
+          Checklist Date: {checklistDate}
+        </div>
+
+        {isReadOnly && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            This checklist is from a previous day and is now read-only.
+          </div>
+        )}
 
         <div className="mt-3">
           <a
@@ -111,6 +127,7 @@ export default function ChecklistClient({
                         <input
                           type="checkbox"
                           checked={item.completed}
+                          disabled={isReadOnly}
                           onChange={(e) =>
                             updateItem(item.id, "completed", e.target.checked)
                           }
@@ -123,6 +140,7 @@ export default function ChecklistClient({
                         type="text"
                         placeholder="Initials"
                         value={item.employee_initials || ""}
+                        disabled={isReadOnly}
                         onChange={(e) =>
                           updateItem(
                             item.id,
@@ -130,7 +148,7 @@ export default function ChecklistClient({
                             e.target.value.toUpperCase()
                           )
                         }
-                        className="w-28 rounded-lg border px-3 py-2 text-lg"
+                        className="w-28 rounded-lg border px-3 py-2 text-lg disabled:bg-gray-100"
                         maxLength={5}
                       />
                     </div>
