@@ -63,8 +63,24 @@ export default function ChecklistClient({
     return { completed, total, percent };
   };
 
+  const getColor = (section: string) => {
+    if (section === "Daily") return "bg-blue-500";
+    if (section === "Nightly Closing") return "bg-amber-500";
+    if (section === "Weekly") return "bg-green-500";
+    return "bg-gray-500";
+  };
+
+  const getHeaderColor = (section: string) => {
+    if (section === "Daily") return "text-blue-600";
+    if (section === "Nightly Closing") return "text-amber-600";
+    if (section === "Weekly") return "text-green-600";
+    return "text-gray-700";
+  };
+
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* HEADER */}
+
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
         <h1 className="text-3xl font-bold">Tupelo Tea Checklist</h1>
         <p className="text-gray-600">Check tasks and enter initials</p>
@@ -88,6 +104,8 @@ export default function ChecklistClient({
           </a>
         </div>
 
+        {/* SECTION PROGRESS BARS */}
+
         <div className="mt-5 space-y-4">
           {sections.map((section) => {
             const stats = getSectionStats(section);
@@ -104,7 +122,9 @@ export default function ChecklistClient({
 
                 <div className="h-4 w-full rounded-full bg-gray-200">
                   <div
-                    className="h-4 rounded-full bg-green-500 transition-all"
+                    className={`h-4 rounded-full transition-all ${getColor(
+                      section
+                    )}`}
                     style={{ width: `${stats.percent}%` }}
                   />
                 </div>
@@ -113,6 +133,8 @@ export default function ChecklistClient({
           })}
         </div>
       </div>
+
+      {/* CHECKLIST */}
 
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-6">
         {sections.map((section) => {
@@ -124,7 +146,13 @@ export default function ChecklistClient({
 
           return (
             <section key={section} className="rounded-2xl border bg-white p-5">
-              <h2 className="mb-4 text-2xl font-semibold">{section}</h2>
+              <h2
+                className={`mb-4 text-2xl font-semibold ${getHeaderColor(
+                  section
+                )}`}
+              >
+                {section}
+              </h2>
 
               <div className="space-y-4">
                 {sectionItems.map((item) => (
