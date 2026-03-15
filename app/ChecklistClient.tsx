@@ -56,7 +56,6 @@ export default function ChecklistClient({
 
   return (
     <main className="min-h-screen bg-gray-50">
-
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
         <h1 className="text-3xl font-bold">Tupelo Tea Checklist</h1>
         <p className="text-gray-600">Check tasks and enter initials</p>
@@ -71,24 +70,23 @@ export default function ChecklistClient({
         </div>
 
         <div className="mt-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
+          <div className="mb-1 flex justify-between text-sm text-gray-600">
             <span>Daily Progress</span>
             <span>
               {completedCount} / {totalCount}
             </span>
           </div>
 
-          <div className="w-full bg-gray-200 rounded-full h-4">
+          <div className="h-4 w-full rounded-full bg-gray-200">
             <div
-              className="bg-green-500 h-4 rounded-full transition-all"
+              className="h-4 rounded-full bg-green-500 transition-all"
               style={{ width: `${progressPercent}%` }}
-            ></div>
+            />
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-8">
-
+      <div className="mx-auto max-w-5xl space-y-8 px-4 py-6">
         {sections.map((section) => {
           const sectionItems = items.filter(
             (item) => item.task_section === section
@@ -97,33 +95,24 @@ export default function ChecklistClient({
           if (sectionItems.length === 0) return null;
 
           return (
-            <section key={section} className="bg-white border rounded-2xl p-5">
-
-              <h2 className="text-2xl font-semibold mb-4">{section}</h2>
+            <section key={section} className="rounded-2xl border bg-white p-5">
+              <h2 className="mb-4 text-2xl font-semibold">{section}</h2>
 
               <div className="space-y-4">
                 {sectionItems.map((item) => (
                   <div
                     key={item.id}
-                    className="border rounded-xl p-4 bg-gray-50"
+                    className="rounded-xl border bg-gray-50 p-4"
                   >
+                    <div className="text-xl font-semibold">{item.task_name}</div>
 
-                    <div className="text-xl font-semibold">
-                      {item.task_name}
-                    </div>
-
-                    <div className="flex flex-col gap-4 mt-4 sm:flex-row sm:items-center sm:justify-between">
-
+                    <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <label className="flex items-center gap-3 text-lg">
                         <input
                           type="checkbox"
                           checked={item.completed}
                           onChange={(e) =>
-                            updateItem(
-                              item.id,
-                              "completed",
-                              e.target.checked
-                            )
+                            updateItem(item.id, "completed", e.target.checked)
                           }
                           className="h-7 w-7"
                         />
@@ -141,10 +130,9 @@ export default function ChecklistClient({
                             e.target.value.toUpperCase()
                           )
                         }
-                        className="border rounded-lg px-3 py-2 text-lg w-28"
+                        className="w-28 rounded-lg border px-3 py-2 text-lg"
                         maxLength={5}
                       />
-
                     </div>
 
                     <div className="mt-3 text-gray-600">
@@ -157,15 +145,12 @@ export default function ChecklistClient({
                         {new Date(item.completed_at).toLocaleString()}
                       </div>
                     )}
-
                   </div>
                 ))}
               </div>
-
             </section>
           );
         })}
-
       </div>
     </main>
   );
