@@ -23,7 +23,15 @@ export default async function Home() {
     const { data: templates, error: templateError } = await supabase
       .from("task_templates")
       .select("task_name, task_type, task_section, sort_order")
-      .eq("active", true)
+      const today = new Date();
+const weekday = today.getDay();
+
+const { data: templates } = await supabase
+  .from("task_templates")
+  .select("*")
+  .eq("active", true)
+  .or(`weekday.is.null,weekday.eq.${weekday}`)
+  .order("sort_order", { ascending: true });
       .order("sort_order", { ascending: true });
 
     if (templateError) {

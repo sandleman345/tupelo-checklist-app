@@ -14,19 +14,40 @@ export default async function ManagerPage(props: {
 
   const selectedDate = resolvedParams.date || yesterday;
 
+  const selected = new Date(`${selectedDate}T12:00:00`);
+  const dayOfWeek = selected.getDay();
+
+  const weekStart = new Date(selected);
+  weekStart.setDate(selected.getDate() - dayOfWeek);
+
+  const weekEnd = new Date(selected);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  const weekStartString = formatDate(weekStart);
+  const weekEndString = formatDate(weekEnd);
+
   const { data, error } = await supabase
     .from("checklist_items")
     .select("*")
     .eq("checklist_date", selectedDate)
     .order("id", { ascending: true });
 
-  if (error) {
+  const { data: weeklyData, error: weeklyError } = await supabase
+    .from("checklist_items")
+    .select("*")
+    .eq("task_section", "Weekly")
+    .gte("checklist_date", weekStartString)
+    .lte("checklist_date", weekEndString);
+
+  if (error || weeklyError) {
     return (
       <main className="min-h-screen bg-gray-50 p-6">
         <div className="mx-auto max-w-5xl">
           <h1 className="mb-4 text-3xl font-bold">Manager View</h1>
           <div className="rounded-xl border bg-white p-4">
-            Error: {error.message}
+            Error: {error?.message || weeklyError?.message}
           </div>
         </div>
       </main>
@@ -38,6 +59,13 @@ export default async function ManagerPage(props: {
   const totalCount = data?.length || 0;
   const incompleteCount = totalCount - completedCount;
   const missedTasks = data?.filter((item) => !item.completed) || [];
+
+  const weeklyCompletedCount =
+    weeklyData?.filter((item) => item.completed).length || 0;
+  const weeklyTotalCount = weeklyData?.length || 0;
+  const weeklyPercent = weeklyTotalCount
+    ? Math.round((weeklyCompletedCount / weeklyTotalCount) * 100)
+    : 0;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -85,13 +113,39 @@ export default async function ManagerPage(props: {
           </button>
         </form>
 
+        <section className="rounded-2xl border bg-white p-5">
+          <h2 className="mb-2 text-2xl font-semibold">Weekly Progress</h2>
+          <div className="mb-2 text-sm text-gray-600">
+            Week of {weekStartString} to {weekEndString}
+          </div>
+
+          <div className="mb-2 flex justify-between text-sm text-gray-600">
+            <span>Weekly Tasks Completed</span>
+            <span>
+              {weeklyCompletedCount} / {weeklyTotalCount}
+            </span>
+          </div>
+
+          <div className="h-4 w-full rounded-full bg-gray-200">
+            <div
+              className="h-4 rounded-full bg-green-500 transition-all"
+              style={{ width: `${weeklyPercent}%` }}
+            />
+          </div>
+
+          <div className="mt-2 text-sm text-gray-700">
+            {weeklyPercent}% complete
+          </div>
+        </section>
+
         {selectedDate === yesterday && missedTasks.length > 0 && (
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <h2 className="mb-2 text-2xl font-semibold text-amber-800">
               Yesterday&apos;s Missed Tasks
             </h2>
             <p className="text-amber-900">
-              {missedTasks.length} task{missedTasks.length === 1 ? "" : "s"} not completed.
+              {missedTasks.length} task{missedTasks.length === 1 ? "" : "s"} not
+              completed.
             </p>
           </section>
         )}
