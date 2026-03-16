@@ -84,10 +84,10 @@ export default function ChecklistClient({
   };
 
   const getHeaderColor = (section: string) => {
-    if (section === "Daily") return "text-blue-600";
-    if (section === "Nightly Closing") return "text-amber-600";
-    if (section === "Weekly") return "text-green-600";
-    return "text-gray-700";
+    if (section === "Daily") return "text-blue-700";
+    if (section === "Nightly Closing") return "text-amber-700";
+    if (section === "Weekly") return "text-green-700";
+    return "text-gray-900";
   };
 
   const getWeekday = () => {
@@ -105,17 +105,17 @@ export default function ChecklistClient({
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 text-gray-900">
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
-        <h1 className="text-3xl font-bold">Tupelo Tea Checklist</h1>
-        <p className="text-gray-600">Check tasks and enter initials</p>
+        <h1 className="text-3xl font-bold text-black">Tupelo Tea Checklist</h1>
+        <p className="text-gray-800">Check tasks and enter initials</p>
 
-        <div className="mt-2 text-sm text-gray-500">
+        <div className="mt-2 text-sm text-gray-700">
           Checklist Date: {checklistDate}
         </div>
 
         {isReadOnly && (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             This checklist is from a previous day and is now read-only.
           </div>
         )}
@@ -123,7 +123,7 @@ export default function ChecklistClient({
         <div className="mt-3">
           <a
             href="/manager"
-            className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
+            className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium text-gray-900 shadow-sm"
           >
             Manager View
           </a>
@@ -136,7 +136,7 @@ export default function ChecklistClient({
 
             return (
               <div key={section}>
-                <div className="mb-1 flex justify-between text-sm text-gray-600">
+                <div className="mb-1 flex justify-between text-sm text-gray-800">
                   <span>
                     {section === "Weekly"
                       ? `Weekly (${getWeekday()}) Progress`
@@ -147,7 +147,7 @@ export default function ChecklistClient({
                   </span>
                 </div>
 
-                <div className="h-4 w-full rounded-full bg-gray-200">
+                <div className="h-4 w-full rounded-full bg-gray-300">
                   <div
                     className={`h-4 rounded-full transition-all ${getColor(
                       section
@@ -185,7 +185,7 @@ export default function ChecklistClient({
                     : section}
                 </span>
 
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-700">
                   {sectionItems.length} tasks
                 </span>
               </button>
@@ -197,12 +197,12 @@ export default function ChecklistClient({
                       key={item.id}
                       className="rounded-xl border bg-gray-50 p-4"
                     >
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-semibold text-gray-900">
                         {item.task_name}
                       </div>
 
                       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex items-center gap-3 text-lg">
+                        <label className="flex items-center gap-3 text-lg text-gray-900">
                           <input
                             type="checkbox"
                             checked={item.completed}
@@ -227,17 +227,17 @@ export default function ChecklistClient({
                               e.target.value.toUpperCase()
                             )
                           }
-                          className="w-28 rounded-lg border px-3 py-2 text-lg disabled:bg-gray-100"
+                          className="w-28 rounded-lg border px-3 py-2 text-lg text-gray-900 placeholder:text-gray-600 disabled:bg-gray-100"
                           maxLength={5}
                         />
                       </div>
 
-                      <div className="mt-3 text-gray-600">
+                      <div className="mt-3 text-gray-800">
                         Status: {item.completed ? "Completed" : "Not completed"}
                       </div>
 
                       {item.completed_at && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-700">
                           Completed at:{" "}
                           {new Date(item.completed_at).toLocaleString()}
                         </div>
