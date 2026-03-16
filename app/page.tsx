@@ -15,7 +15,7 @@ export default async function Home() {
   if (existingChecklist.error) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Supabase Error</h1>
+        <h1 className="mb-4 text-2xl font-bold">Supabase Error</h1>
         <p>{existingChecklist.error.message}</p>
       </div>
     );
@@ -26,13 +26,13 @@ export default async function Home() {
       .from("task_templates")
       .select("task_name, task_type, task_section, sort_order, weekday")
       .eq("active", true)
-      .or(`weekday.is.null,weekday.eq.${weekday}`)
+      .or(`task_section.not.eq.Weekly,and(task_section.eq.Weekly,weekday.eq.${weekday})`)
       .order("sort_order", { ascending: true });
 
     if (templateError) {
       return (
         <div className="p-8">
-          <h1 className="text-2xl font-bold mb-4">Template Error</h1>
+          <h1 className="mb-4 text-2xl font-bold">Template Error</h1>
           <p>{templateError.message}</p>
         </div>
       );
@@ -54,7 +54,7 @@ export default async function Home() {
       if (insertError) {
         return (
           <div className="p-8">
-            <h1 className="text-2xl font-bold mb-4">Insert Error</h1>
+            <h1 className="mb-4 text-2xl font-bold">Insert Error</h1>
             <p>{insertError.message}</p>
           </div>
         );
@@ -71,7 +71,7 @@ export default async function Home() {
   if (error) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">Supabase Error</h1>
+        <h1 className="mb-4 text-2xl font-bold">Supabase Error</h1>
         <p>{error.message}</p>
       </div>
     );
