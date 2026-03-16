@@ -53,7 +53,7 @@ export default function ManageTasksClient({
       .from("task_templates")
       .update({
         task_name: task.task_name,
-        task_type: task.task_type,
+        task_type: task.task_section === "Weekly" ? "weekly" : "daily",
         task_section: task.task_section,
         active: task.active,
         sort_order: task.sort_order,
@@ -120,6 +120,62 @@ export default function ManageTasksClient({
     setMessage(`Added: ${data.task_name}`);
   };
 
+  const regenerateTodayChecklist = async () => {
+    setMessage("Regenerating today's checklist...");
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const weekday = now.getDay();
+
+    const { error: deleteError } = await supabase
+      .from("checklist_items")
+      .delete()
+      .eq("checklist_date", today);
+
+    if (deleteError) {
+      setMessage("Error deleting today's checklist");
+      return;
+    }
+
+    const { data: templates, error: templateError } = await supabase
+      .from("task_templates")
+      .select("task_name, task_type, task_section, sort_order, weekday")
+      .eq("active", true)
+      .or(`task_section.not.eq.Weekly,and(task_section.eq.Weekly,weekday.eq.${weekday})`)
+      .order("sort_order", { ascending: true });
+
+    if (templateError) {
+      setMessage("Error loading task templates");
+      return;
+    }
+
+    if (!templates || templates.length === 0) {
+      setMessage("No active templates found");
+      return;
+    }
+
+    const rowsToInsert = templates.map((task) => ({
+      checklist_date: today,
+      task_name: task.task_name,
+      task_type: task.task_type,
+      task_section: task.task_section,
+      completed: false,
+      employee_initials: null,
+      completed_at: null,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("checklist_items")
+      .insert(rowsToInsert);
+
+    if (insertError) {
+      setMessage("Error rebuilding today's checklist");
+      return;
+    }
+
+    setMessage("Today's checklist has been regenerated successfully.");
+  };
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="border-b bg-white">
@@ -129,7 +185,7 @@ export default function ManageTasksClient({
             Add, edit, delete, and organize checklist tasks
           </p>
 
-          <div className="mt-3 flex gap-3">
+          <div className="mt-3 flex gap-3 flex-wrap">
             <a
               href="/"
               className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
@@ -143,6 +199,13 @@ export default function ManageTasksClient({
             >
               Manager View
             </a>
+
+            <button
+              onClick={regenerateTodayChecklist}
+              className="inline-flex items-center rounded-xl border bg-blue-50 px-4 py-2 text-base font-medium shadow-sm"
+            >
+              Regenerate Today&apos;s Checklist
+            </button>
           </div>
 
           {message && (
@@ -155,7 +218,7 @@ export default function ManageTasksClient({
 
       <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
         <section className="rounded-2xl border bg-white p-5">
-          <h2 className="text-2xl font-semibold mb-4">Add New Task</h2>
+          <h2 className="mb-4 text-2xl font-semibold">Add New Task</h2>
 
           <div className="grid gap-4 md:grid-cols-5">
             <input
@@ -185,7 +248,10 @@ export default function ManageTasksClient({
               placeholder="Sort order"
               value={newTask.sort_order}
               onChange={(e) =>
-                setNewTask((prev) => ({ ...prev, sort_order: Number(e.target.value) }))
+                setNewTask((prev) => ({
+                  ...prev,
+                  sort_order: Number(e.target.value),
+                }))
               }
               className="rounded-lg border px-3 py-2"
             />
@@ -216,7 +282,7 @@ export default function ManageTasksClient({
         </section>
 
         <section className="rounded-2xl border bg-white p-5">
-          <h2 className="text-2xl font-semibold mb-4">Current Tasks</h2>
+          <h2 className="mb-4 text-2xl font-semibold">Current Tasks</h2>
 
           <div className="space-y-4">
             {tasks.map((task) => (
