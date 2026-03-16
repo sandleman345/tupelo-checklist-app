@@ -8,6 +8,7 @@ export default async function ManagerPage(props: {
   const resolvedParams = (await props.searchParams) || {};
 
   const today = new Date().toISOString().split("T")[0];
+
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterday = yesterdayDate.toISOString().split("T")[0];
@@ -55,23 +56,30 @@ export default async function ManagerPage(props: {
   }
 
   const sections = ["Daily", "Nightly Closing", "Weekly"];
+
   const completedCount = data?.filter((item) => item.completed).length || 0;
   const totalCount = data?.length || 0;
   const incompleteCount = totalCount - completedCount;
+
   const missedTasks = data?.filter((item) => !item.completed) || [];
 
   const weeklyCompletedCount =
     weeklyData?.filter((item) => item.completed).length || 0;
+
   const weeklyTotalCount = weeklyData?.length || 0;
+
   const weeklyPercent = weeklyTotalCount
     ? Math.round((weeklyCompletedCount / weeklyTotalCount) * 100)
     : 0;
 
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* HEADER */}
+
       <div className="border-b bg-white">
         <div className="mx-auto max-w-6xl px-4 py-5">
           <h1 className="text-3xl font-bold">Manager View</h1>
+
           <p className="mt-1 text-gray-600">
             Review completed and missed tasks by date
           </p>
@@ -81,29 +89,34 @@ export default async function ManagerPage(props: {
           </div>
 
           <div className="mt-3 flex gap-3">
-  <a
-    href="/"
-    className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-  >
-    Back to Checklist
-  </a>
+            <a
+              href="/"
+              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
+            >
+              Back to Checklist
+            </a>
 
-  <a
-    href="/manage-tasks"
-    className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-  >
-    Manage Tasks
-  </a>
-</div>
+            <a
+              href="/manage-tasks"
+              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
+            >
+              Manage Tasks
+            </a>
+          </div>
         </div>
       </div>
 
+      {/* CONTENT */}
+
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+        {/* DATE SELECTOR */}
+
         <form className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
           <div>
             <label className="mb-1 block text-sm font-medium">
               Checklist Date
             </label>
+
             <input
               type="date"
               name="date"
@@ -120,8 +133,11 @@ export default async function ManagerPage(props: {
           </button>
         </form>
 
+        {/* WEEKLY PROGRESS */}
+
         <section className="rounded-2xl border bg-white p-5">
           <h2 className="mb-2 text-2xl font-semibold">Weekly Progress</h2>
+
           <div className="mb-2 text-sm text-gray-600">
             Week of {weekStartString} to {weekEndString}
           </div>
@@ -145,17 +161,7 @@ export default async function ManagerPage(props: {
           </div>
         </section>
 
-        {selectedDate === yesterday && missedTasks.length > 0 && (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <h2 className="mb-2 text-2xl font-semibold text-amber-800">
-              Yesterday&apos;s Missed Tasks
-            </h2>
-            <p className="text-amber-900">
-              {missedTasks.length} task{missedTasks.length === 1 ? "" : "s"} not
-              completed.
-            </p>
-          </section>
-        )}
+        {/* STATS */}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border bg-white p-4">
@@ -174,6 +180,8 @@ export default async function ManagerPage(props: {
           </div>
         </div>
 
+        {/* MISSED TASKS */}
+
         {missedTasks.length > 0 && (
           <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
             <h2 className="mb-4 text-2xl font-semibold text-red-700">
@@ -187,6 +195,7 @@ export default async function ManagerPage(props: {
                   className="rounded-xl border border-red-200 bg-white p-4"
                 >
                   <div className="text-lg font-semibold">{item.task_name}</div>
+
                   <div className="mt-1 text-sm text-gray-600">
                     Section: {item.task_section}
                   </div>
@@ -196,64 +205,57 @@ export default async function ManagerPage(props: {
           </section>
         )}
 
-        {totalCount === 0 ? (
-          <div className="rounded-2xl border bg-white p-6 text-lg">
-            No checklist found for {selectedDate}.
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {sections.map((section) => {
-              const sectionItems =
-                data?.filter((item) => item.task_section === section) || [];
+        {/* TASK LIST */}
 
-              if (sectionItems.length === 0) return null;
+        <div className="space-y-8">
+          {sections.map((section) => {
+            const sectionItems =
+              data?.filter((item) => item.task_section === section) || [];
 
-              return (
-                <section
-                  key={section}
-                  className="rounded-2xl border bg-white p-5"
-                >
-                  <h2 className="mb-4 text-2xl font-semibold">{section}</h2>
+            if (sectionItems.length === 0) return null;
 
-                  <div className="space-y-3">
-                    {sectionItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`rounded-xl border p-4 ${
-                          item.completed
-                            ? "border-green-200 bg-green-50"
-                            : "border-red-200 bg-red-50"
-                        }`}
-                      >
-                        <div className="text-xl font-semibold">
-                          {item.task_name}
-                        </div>
+            return (
+              <section key={section} className="rounded-2xl border bg-white p-5">
+                <h2 className="mb-4 text-2xl font-semibold">{section}</h2>
 
-                        <div className="mt-2 text-base">
-                          Status:{" "}
-                          <span className="font-medium">
-                            {item.completed ? "Completed" : "Incomplete"}
-                          </span>
-                        </div>
-
-                        <div className="text-base text-gray-700">
-                          Initials: {item.employee_initials || "—"}
-                        </div>
-
-                        <div className="text-sm text-gray-500">
-                          Completed at:{" "}
-                          {item.completed_at
-                            ? new Date(item.completed_at).toLocaleString()
-                            : "—"}
-                        </div>
+                <div className="space-y-3">
+                  {sectionItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-xl border p-4 ${
+                        item.completed
+                          ? "border-green-200 bg-green-50"
+                          : "border-red-200 bg-red-50"
+                      }`}
+                    >
+                      <div className="text-xl font-semibold">
+                        {item.task_name}
                       </div>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        )}
+
+                      <div className="mt-2 text-base">
+                        Status:{" "}
+                        <span className="font-medium">
+                          {item.completed ? "Completed" : "Incomplete"}
+                        </span>
+                      </div>
+
+                      <div className="text-base text-gray-700">
+                        Initials: {item.employee_initials || "—"}
+                      </div>
+
+                      <div className="text-sm text-gray-500">
+                        Completed at:{" "}
+                        {item.completed_at
+                          ? new Date(item.completed_at).toLocaleString()
+                          : "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </main>
   );
