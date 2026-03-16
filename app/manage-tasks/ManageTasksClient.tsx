@@ -32,7 +32,6 @@ export default function ManageTasksClient({
   const [message, setMessage] = useState("");
   const [newTask, setNewTask] = useState({
     task_name: "",
-    task_type: "daily",
     task_section: "Daily",
     sort_order: tasks.length + 1,
     weekday: "",
@@ -61,19 +60,26 @@ export default function ManageTasksClient({
       })
       .eq("id", task.id);
 
-    setMessage(error ? `Error saving ${task.task_name}` : `Saved: ${task.task_name}`);
+    if (error) {
+      setMessage(`Error saving ${task.task_name}: ${error.message}`);
+      return;
+    }
+
+    setMessage(`Saved: ${task.task_name}`);
   };
 
   const deleteTask = async (id: number) => {
     const task = tasks.find((t) => t.id === id);
+
     const { error } = await supabase.from("task_templates").delete().eq("id", id);
 
-    if (!error) {
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      setMessage(`Deleted: ${task?.task_name || "task"}`);
-    } else {
-      setMessage("Error deleting task");
+    if (error) {
+      setMessage(`Error deleting task: ${error.message}`);
+      return;
     }
+
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setMessage(`Deleted: ${task?.task_name || "task"}`);
   };
 
   const addTask = async () => {
@@ -101,7 +107,7 @@ export default function ManageTasksClient({
       .single();
 
     if (error) {
-      setMessage("Error adding task");
+      setMessage(`Error adding task: ${error.message}`);
       return;
     }
 
@@ -111,7 +117,6 @@ export default function ManageTasksClient({
 
     setNewTask({
       task_name: "",
-      task_type: "daily",
       task_section: "Daily",
       sort_order: tasks.length + 2,
       weekday: "",
@@ -121,6 +126,12 @@ export default function ManageTasksClient({
   };
 
   const regenerateTodayChecklist = async () => {
+    const confirmed = window.confirm(
+      "This will erase today's current checklist progress and rebuild it from the templates. Continue?"
+    );
+
+    if (!confirmed) return;
+
     setMessage("Regenerating today's checklist...");
 
     const now = new Date();
@@ -133,7 +144,7 @@ export default function ManageTasksClient({
       .eq("checklist_date", today);
 
     if (deleteError) {
-      setMessage("Error deleting today's checklist");
+      setMessage(`Error deleting today's checklist: ${deleteError.message}`);
       return;
     }
 
@@ -141,20 +152,24 @@ export default function ManageTasksClient({
       .from("task_templates")
       .select("task_name, task_type, task_section, sort_order, weekday")
       .eq("active", true)
-      .or(`task_section.not.eq.Weekly,and(task_section.eq.Weekly,weekday.eq.${weekday})`)
       .order("sort_order", { ascending: true });
 
     if (templateError) {
-      setMessage("Error loading task templates");
+      setMessage(`Error loading task templates: ${templateError.message}`);
       return;
     }
 
     if (!templates || templates.length === 0) {
-      setMessage("No active templates found");
+      setMessage("No active templates found.");
       return;
     }
 
-    const rowsToInsert = templates.map((task) => ({
+    const filteredTemplates = templates.filter((task) => {
+      if (task.task_section !== "Weekly") return true;
+      return task.weekday === weekday;
+    });
+
+    const rowsToInsert = filteredTemplates.map((task) => ({
       checklist_date: today,
       task_name: task.task_name,
       task_type: task.task_type,
@@ -169,11 +184,13 @@ export default function ManageTasksClient({
       .insert(rowsToInsert);
 
     if (insertError) {
-      setMessage("Error rebuilding today's checklist");
+      setMessage(`Error rebuilding today's checklist: ${insertError.message}`);
       return;
     }
 
     setMessage("Today's checklist has been regenerated successfully.");
+
+    window.location.href = "/";
   };
 
   return (
