@@ -90,6 +90,20 @@ export default function ChecklistClient({
     return "text-gray-700";
   };
 
+  const getWeekday = () => {
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    return days[new Date().getDay()];
+  };
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
@@ -123,7 +137,11 @@ export default function ChecklistClient({
             return (
               <div key={section}>
                 <div className="mb-1 flex justify-between text-sm text-gray-600">
-                  <span>{section} Progress</span>
+                  <span>
+                    {section === "Weekly"
+                      ? `Weekly (${getWeekday()}) Progress`
+                      : `${section} Progress`}
+                  </span>
                   <span>
                     {stats.completed} / {stats.total}
                   </span>
@@ -161,7 +179,10 @@ export default function ChecklistClient({
                 )}`}
               >
                 <span>
-                  {openSections[section] ? "▼" : "▶"} {section}
+                  {openSections[section] ? "▼" : "▶"}{" "}
+                  {section === "Weekly"
+                    ? `Weekly (${getWeekday()})`
+                    : section}
                 </span>
 
                 <span className="text-sm text-gray-500">
