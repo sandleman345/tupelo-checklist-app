@@ -30,10 +30,14 @@ export default function ManageTasksClient({
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [message, setMessage] = useState("");
+  const [originalNames, setOriginalNames] = useState<Record<number, string>>(
+    Object.fromEntries(initialTasks.map((task) => [task.id, task.task_name]))
+  );
+
   const [newTask, setNewTask] = useState({
     task_name: "",
     task_section: "Daily",
-    sort_order: tasks.length + 1,
+    sort_order: initialTasks.length + 1,
     weekday: "",
   });
 
@@ -48,11 +52,15 @@ export default function ManageTasksClient({
   };
 
   const saveTask = async (task: TaskTemplate) => {
-    const { error } = await supabase
+    const today = new Date().toISOString().split("T")[0];
+    const oldTaskName = originalNames[task.id] || task.task_name;
+    const newTaskType = task.task_section === "Weekly" ? "weekly" : "daily";
+
+    const { error: templateError } = await supabase
       .from("task_templates")
       .update({
         task_name: task.task_name,
-        task_type: task.task_section === "Weekly" ? "weekly" : "daily",
+        task_type: newTaskType,
         task_section: task.task_section,
         active: task.active,
         sort_order: task.sort_order,
@@ -60,10 +68,32 @@ export default function ManageTasksClient({
       })
       .eq("id", task.id);
 
-    if (error) {
-      setMessage(`Error saving ${task.task_name}: ${error.message}`);
+    if (templateError) {
+      setMessage(`Error saving ${task.task_name}: ${templateError.message}`);
       return;
     }
+
+    const { error: checklistError } = await supabase
+      .from("checklist_items")
+      .update({
+        task_name: task.task_name,
+        task_type: newTaskType,
+        task_section: task.task_section,
+      })
+      .eq("checklist_date", today)
+      .eq("task_name", oldTaskName);
+
+    if (checklistError) {
+      setMessage(
+        `Saved template, but could not update today's checklist: ${checklistError.message}`
+      );
+      return;
+    }
+
+    setOriginalNames((prev) => ({
+      ...prev,
+      [task.id]: task.task_name,
+    }));
 
     setMessage(`Saved: ${task.task_name}`);
   };
@@ -111,9 +141,16 @@ export default function ManageTasksClient({
       return;
     }
 
+    const createdTask = data as TaskTemplate;
+
     setTasks((prev) =>
-      [...prev, data as TaskTemplate].sort((a, b) => a.sort_order - b.sort_order)
+      [...prev, createdTask].sort((a, b) => a.sort_order - b.sort_order)
     );
+
+    setOriginalNames((prev) => ({
+      ...prev,
+      [createdTask.id]: createdTask.task_name,
+    }));
 
     setNewTask({
       task_name: "",
@@ -122,7 +159,7 @@ export default function ManageTasksClient({
       weekday: "",
     });
 
-    setMessage(`Added: ${data.task_name}`);
+    setMessage(`Added: ${createdTask.task_name}`);
   };
 
   const regenerateTodayChecklist = async () => {
@@ -189,7 +226,6 @@ export default function ManageTasksClient({
     }
 
     setMessage("Today's checklist has been regenerated successfully.");
-
     window.location.href = "/";
   };
 
@@ -202,7 +238,7 @@ export default function ManageTasksClient({
             Add, edit, delete, and organize checklist tasks
           </p>
 
-          <div className="mt-3 flex gap-3 flex-wrap">
+          <div className="mt-3 flex flex-wrap gap-3">
             <a
               href="/"
               className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
@@ -233,7 +269,7 @@ export default function ManageTasksClient({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
         <section className="rounded-2xl border bg-white p-5">
           <h2 className="mb-4 text-2xl font-semibold">Add New Task</h2>
 
