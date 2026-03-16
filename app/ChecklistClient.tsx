@@ -154,8 +154,9 @@ export default function ChecklistClient({
           return (
             <section key={section} className="rounded-2xl border bg-white p-5">
               <button
+                type="button"
                 onClick={() => toggleSection(section)}
-                className={`mb-4 flex w-full items-center justify-between text-left text-2xl font-semibold ${getHeaderColor(
+                className={`mb-4 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-2xl font-semibold ${getHeaderColor(
                   section
                 )}`}
               >
@@ -168,7 +169,7 @@ export default function ChecklistClient({
                 </span>
               </button>
 
-              {openSections[section] && (
+              {openSections[section] ? (
                 <div className="space-y-4">
                   {sectionItems.map((item) => (
                     <div
@@ -223,7 +224,7 @@ export default function ChecklistClient({
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </section>
           );
         })}
