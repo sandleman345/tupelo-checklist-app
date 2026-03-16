@@ -2,7 +2,9 @@ import ChecklistClient from "./ChecklistClient";
 import { supabase } from "@/lib/supabase";
 
 export default async function Home() {
-  const today = new Date().toISOString().split("T")[0];
+  const todayDate = new Date();
+  const today = todayDate.toISOString().split("T")[0];
+  const weekday = todayDate.getDay();
 
   const existingChecklist = await supabase
     .from("checklist_items")
@@ -22,16 +24,9 @@ export default async function Home() {
   if (!existingChecklist.data || existingChecklist.data.length === 0) {
     const { data: templates, error: templateError } = await supabase
       .from("task_templates")
-      .select("task_name, task_type, task_section, sort_order")
-      const today = new Date();
-const weekday = today.getDay();
-
-const { data: templates } = await supabase
-  .from("task_templates")
-  .select("*")
-  .eq("active", true)
-  .or(`weekday.is.null,weekday.eq.${weekday}`)
-  .order("sort_order", { ascending: true });
+      .select("task_name, task_type, task_section, sort_order, weekday")
+      .eq("active", true)
+      .or(`weekday.is.null,weekday.eq.${weekday}`)
       .order("sort_order", { ascending: true });
 
     if (templateError) {
