@@ -80,14 +80,21 @@ export default async function ManagerPage(props: {
             Today: {today} | Default report date: {selectedDate}
           </div>
 
-          <div className="mt-3">
-            <a
-              href="/"
-              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Back to Checklist
-            </a>
-          </div>
+          <div className="mt-3 flex gap-3">
+  <a
+    href="/"
+    className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
+  >
+    Back to Checklist
+  </a>
+
+  <a
+    href="/manage-tasks"
+    className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
+  >
+    Manage Tasks
+  </a>
+</div>
         </div>
       </div>
 
