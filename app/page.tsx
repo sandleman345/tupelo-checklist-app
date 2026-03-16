@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import ChecklistClient from "./ChecklistClient";
 import { supabase } from "@/lib/supabase";
 

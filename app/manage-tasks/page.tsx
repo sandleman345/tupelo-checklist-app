@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import ManageTasksClient from "./ManageTasksClient";
 import { supabase } from "@/lib/supabase";
 
