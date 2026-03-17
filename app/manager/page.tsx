@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
+import ManagerControls from "./ManagerControls";
 
 type SearchParams = Promise<{ date?: string }>;
 
@@ -23,23 +24,8 @@ export default async function ManagerPage(props: {
     return (
       <AppShell
         title="Manager Dashboard"
-        subtitle={`Date: ${selectedDate}`}
-        rightSlot={
-          <div className="flex flex-wrap gap-2">
-            <a
-              href="/"
-              className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm"
-            >
-              Back to Checklist
-            </a>
-            <a
-              href="/manage-tasks"
-              className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm"
-            >
-              Manage Tasks
-            </a>
-          </div>
-        }
+        subtitle={`Viewing checklist for ${selectedDate}`}
+        rightSlot={<ManagerControls />}
       >
         <div className="rounded-2xl border bg-white p-4 text-gray-900 shadow-sm">
           Error: {error.message}
@@ -60,28 +46,11 @@ export default async function ManagerPage(props: {
     return { completed: completedCount, total: sectionItems.length };
   };
 
-  const navButtons = (
-    <div className="flex flex-wrap gap-2">
-      <a
-        href="/"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
-      >
-        Back to Checklist
-      </a>
-      <a
-        href="/manage-tasks"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
-      >
-        Manage Tasks
-      </a>
-    </div>
-  );
-
   return (
     <AppShell
       title="Manager Dashboard"
       subtitle={`Viewing checklist for ${selectedDate}`}
-      rightSlot={navButtons}
+      rightSlot={<ManagerControls />}
     >
       <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
         <div>
