@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import ManageTasksClient from "./ManageTasksClient";
 import { supabase } from "@/lib/supabase";
+import ManageTasksClient from "./ManageTasksClient";
 
 export default async function ManageTasksPage() {
   const { data, error } = await supabase
@@ -11,14 +11,7 @@ export default async function ManageTasksPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gray-50 p-6">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="text-3xl font-bold mb-4">Manage Tasks</h1>
-          <div className="rounded-xl border bg-white p-4">
-            Error: {error.message}
-          </div>
-        </div>
-      </main>
+      <div className="p-6 text-gray-900">Error loading tasks: {error.message}</div>
     );
   }
 

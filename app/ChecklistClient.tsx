@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import AppShell from "@/components/AppShell";
 
 type ChecklistItem = {
   id: number;
@@ -100,68 +101,68 @@ export default function ChecklistClient({
       "Friday",
       "Saturday",
     ];
-
     return days[new Date().getDay()];
   };
 
+  const navButtons = (
+    <div className="flex flex-wrap gap-2">
+      <a
+        href="/manager"
+        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+      >
+        Manager View
+      </a>
+      <a
+        href="/manage-tasks"
+        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+      >
+        Manage Tasks
+      </a>
+    </div>
+  );
+
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
-        <h1 className="text-3xl font-bold text-black">Tupelo Tea Checklist</h1>
-        <p className="text-gray-800">Check tasks and enter initials</p>
-
-        <div className="mt-2 text-sm text-gray-700">
-          Checklist Date: {checklistDate}
+    <AppShell
+      title="Tupelo Tea Checklist"
+      subtitle={`Checklist Date: ${checklistDate}`}
+      rightSlot={navButtons}
+    >
+      {isReadOnly && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          This checklist is from a previous day and is now read-only.
         </div>
+      )}
 
-        {isReadOnly && (
-          <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            This checklist is from a previous day and is now read-only.
-          </div>
-        )}
+      <div className="mb-6 grid gap-4">
+        {sections.map((section) => {
+          const stats = getSectionStats(section);
+          if (stats.total === 0) return null;
 
-        <div className="mt-3">
-          <a
-            href="/manager"
-            className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium text-gray-900 shadow-sm"
-          >
-            Manager View
-          </a>
-        </div>
-
-        <div className="mt-5 space-y-4">
-          {sections.map((section) => {
-            const stats = getSectionStats(section);
-            if (stats.total === 0) return null;
-
-            return (
-              <div key={section}>
-                <div className="mb-1 flex justify-between text-sm text-gray-800">
-                  <span>
-                    {section === "Weekly"
-                      ? `Weekly (${getWeekday()}) Progress`
-                      : `${section} Progress`}
-                  </span>
-                  <span>
-                    {stats.completed} / {stats.total}
-                  </span>
-                </div>
-
-                <div className="h-4 w-full rounded-full bg-gray-300">
-                  <div
-                    className={`h-4 rounded-full transition-all ${getColor(
-                      section
-                    )}`}
-                    style={{ width: `${stats.percent}%` }}
-                  />
-                </div>
+          return (
+            <div key={section} className="rounded-2xl border bg-white p-4 shadow-sm">
+              <div className="mb-2 flex items-center justify-between text-sm font-medium text-gray-800">
+                <span>
+                  {section === "Weekly"
+                    ? `Weekly (${getWeekday()}) Progress`
+                    : `${section} Progress`}
+                </span>
+                <span>
+                  {stats.completed} / {stats.total}
+                </span>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="h-4 w-full rounded-full bg-gray-200">
+                <div
+                  className={`h-4 rounded-full transition-all ${getColor(section)}`}
+                  style={{ width: `${stats.percent}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-6">
+      <div className="space-y-6">
         {sections.map((section) => {
           const sectionItems = items.filter(
             (item) => item.task_section === section
@@ -170,39 +171,37 @@ export default function ChecklistClient({
           if (sectionItems.length === 0) return null;
 
           return (
-            <section key={section} className="rounded-2xl border bg-white p-5">
+            <section key={section} className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
               <button
                 type="button"
                 onClick={() => toggleSection(section)}
-                className={`mb-4 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-2xl font-semibold ${getHeaderColor(
+                className={`mb-4 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-xl font-semibold sm:text-2xl ${getHeaderColor(
                   section
                 )}`}
               >
                 <span>
                   {openSections[section] ? "▼" : "▶"}{" "}
-                  {section === "Weekly"
-                    ? `Weekly (${getWeekday()})`
-                    : section}
+                  {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
                 </span>
 
-                <span className="text-sm text-gray-700">
+                <span className="text-sm font-medium text-gray-700">
                   {sectionItems.length} tasks
                 </span>
               </button>
 
-              {openSections[section] ? (
+              {openSections[section] && (
                 <div className="space-y-4">
                   {sectionItems.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl border bg-gray-50 p-4"
+                      className="rounded-2xl border bg-gray-50 p-4"
                     >
-                      <div className="text-xl font-semibold text-gray-900">
+                      <div className="text-lg font-semibold text-gray-900 sm:text-xl">
                         {item.task_name}
                       </div>
 
                       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex items-center gap-3 text-lg text-gray-900">
+                        <label className="flex items-center gap-3 text-base font-medium text-gray-900 sm:text-lg">
                           <input
                             type="checkbox"
                             checked={item.completed}
@@ -210,7 +209,7 @@ export default function ChecklistClient({
                             onChange={(e) =>
                               updateItem(item.id, "completed", e.target.checked)
                             }
-                            className="h-7 w-7"
+                            className="h-6 w-6"
                           />
                           Completed
                         </label>
@@ -227,17 +226,17 @@ export default function ChecklistClient({
                               e.target.value.toUpperCase()
                             )
                           }
-                          className="w-28 rounded-lg border px-3 py-2 text-lg text-gray-900 placeholder:text-gray-600 disabled:bg-gray-100"
+                          className="w-28 rounded-xl border bg-white px-3 py-2 text-base text-gray-900 disabled:bg-gray-100 sm:text-lg"
                           maxLength={5}
                         />
                       </div>
 
-                      <div className="mt-3 text-gray-800">
+                      <div className="mt-3 text-sm text-gray-800 sm:text-base">
                         Status: {item.completed ? "Completed" : "Not completed"}
                       </div>
 
                       {item.completed_at && (
-                        <div className="text-sm text-gray-700">
+                        <div className="mt-1 text-sm text-gray-700">
                           Completed at:{" "}
                           {new Date(item.completed_at).toLocaleString()}
                         </div>
@@ -245,11 +244,11 @@ export default function ChecklistClient({
                     </div>
                   ))}
                 </div>
-              ) : null}
+              )}
             </section>
           );
         })}
       </div>
-    </main>
+    </AppShell>
   );
 }
