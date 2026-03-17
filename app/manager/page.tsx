@@ -1,262 +1,131 @@
-export const dynamic = "force-dynamic";
-
 import { supabase } from "@/lib/supabase";
 
-type SearchParams = Promise<{ date?: string }>;
-
-export default async function ManagerPage(props: {
-  searchParams?: SearchParams;
-}) {
-  const resolvedParams = (await props.searchParams) || {};
-
+export default async function ManagerPage() {
   const today = new Date().toISOString().split("T")[0];
 
-  const yesterdayDate = new Date();
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterday = yesterdayDate.toISOString().split("T")[0];
-
-  const selectedDate = resolvedParams.date || yesterday;
-
-  const selected = new Date(`${selectedDate}T12:00:00`);
-  const dayOfWeek = selected.getDay();
-
-  const weekStart = new Date(selected);
-  weekStart.setDate(selected.getDate() - dayOfWeek);
-
-  const weekEnd = new Date(selected);
-  weekEnd.setDate(weekStart.getDate() + 6);
-
-  const formatDate = (date: Date) => date.toISOString().split("T")[0];
-
-  const weekStartString = formatDate(weekStart);
-  const weekEndString = formatDate(weekEnd);
-
-  const { data, error } = await supabase
+  const { data: items } = await supabase
     .from("checklist_items")
     .select("*")
-    .eq("checklist_date", selectedDate)
-    .order("id", { ascending: true });
+    .eq("checklist_date", today);
 
-  const { data: weeklyData, error: weeklyError } = await supabase
-    .from("checklist_items")
-    .select("*")
-    .eq("task_section", "Weekly")
-    .gte("checklist_date", weekStartString)
-    .lte("checklist_date", weekEndString);
-
-  if (error || weeklyError) {
-    return (
-      <main className="min-h-screen bg-gray-50 p-6">
-        <div className="mx-auto max-w-5xl">
-          <h1 className="mb-4 text-3xl font-bold">Manager View</h1>
-          <div className="rounded-xl border bg-white p-4">
-            Error: {error?.message || weeklyError?.message}
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const total = items?.length || 0;
+  const completed = items?.filter((i) => i.completed).length || 0;
+  const incomplete = total - completed;
 
   const sections = ["Daily", "Nightly Closing", "Weekly"];
 
-  const completedCount = data?.filter((item) => item.completed).length || 0;
-  const totalCount = data?.length || 0;
-  const incompleteCount = totalCount - completedCount;
+  const getSectionStats = (section: string) => {
+    const sectionItems = items?.filter((i) => i.task_section === section) || [];
+    const completed = sectionItems.filter((i) => i.completed).length;
+    const total = sectionItems.length;
 
-  const missedTasks = data?.filter((item) => !item.completed) || [];
-
-  const weeklyCompletedCount =
-    weeklyData?.filter((item) => item.completed).length || 0;
-
-  const weeklyTotalCount = weeklyData?.length || 0;
-
-  const weeklyPercent = weeklyTotalCount
-    ? Math.round((weeklyCompletedCount / weeklyTotalCount) * 100)
-    : 0;
+    return { completed, total };
+  };
 
   return (
     <main className="min-h-screen bg-gray-50">
       {/* HEADER */}
+      <div className="border-b bg-white px-6 py-5">
+        <h1 className="text-3xl font-bold">Manager Dashboard</h1>
 
-      <div className="border-b bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-5">
-          <h1 className="text-3xl font-bold">Manager View</h1>
+        <p className="mt-1 text-gray-700">
+          View today’s checklist progress
+        </p>
 
-          <p className="mt-1 text-gray-600">
-            Review completed and missed tasks by date
-          </p>
+        <div className="mt-2 text-sm text-gray-700">
+          Date: {today}
+        </div>
 
-          <div className="mt-2 text-sm text-gray-500">
-            Today: {today} | Default report date: {selectedDate}
-          </div>
+        <div className="mt-4 flex gap-3 flex-wrap">
+          <a
+            href="/"
+            className="rounded-xl border bg-white px-4 py-2 font-medium shadow-sm"
+          >
+            Back to Checklist
+          </a>
 
-          <div className="mt-3 flex gap-3">
-            <a
-              href="/"
-              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Back to Checklist
-            </a>
-
-            <a
-              href="/manage-tasks"
-              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Manage Tasks
-            </a>
-          </div>
+          <a
+            href="/manage-tasks"
+            className="rounded-xl border bg-white px-4 py-2 font-medium shadow-sm"
+          >
+            Manage Tasks
+          </a>
         </div>
       </div>
 
-      {/* CONTENT */}
-
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        {/* DATE SELECTOR */}
-
-        <form className="flex flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-end">
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Checklist Date
-            </label>
-
-            <input
-              type="date"
-              name="date"
-              defaultValue={selectedDate}
-              className="rounded-lg border px-3 py-2 text-lg"
-            />
+      {/* STATS */}
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-6">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border bg-white p-4 text-center">
+            <div className="text-sm text-gray-700">Total Tasks</div>
+            <div className="text-3xl font-bold">{total}</div>
           </div>
 
-          <button
-            type="submit"
-            className="rounded-lg border bg-white px-4 py-2 text-lg"
-          >
-            View Date
-          </button>
-        </form>
-
-        {/* WEEKLY PROGRESS */}
-
-        <section className="rounded-2xl border bg-white p-5">
-          <h2 className="mb-2 text-2xl font-semibold">Weekly Progress</h2>
-
-          <div className="mb-2 text-sm text-gray-600">
-            Week of {weekStartString} to {weekEndString}
+          <div className="rounded-xl border bg-white p-4 text-center">
+            <div className="text-sm text-gray-700">Completed</div>
+            <div className="text-3xl font-bold text-green-600">
+              {completed}
+            </div>
           </div>
 
-          <div className="mb-2 flex justify-between text-sm text-gray-600">
-            <span>Weekly Tasks Completed</span>
-            <span>
-              {weeklyCompletedCount} / {weeklyTotalCount}
-            </span>
-          </div>
-
-          <div className="h-4 w-full rounded-full bg-gray-200">
-            <div
-              className="h-4 rounded-full bg-green-500 transition-all"
-              style={{ width: `${weeklyPercent}%` }}
-            />
-          </div>
-
-          <div className="mt-2 text-sm text-gray-700">
-            {weeklyPercent}% complete
-          </div>
-        </section>
-
-        {/* STATS */}
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border bg-white p-4">
-            <div className="text-sm text-gray-500">Total Tasks</div>
-            <div className="text-3xl font-bold">{totalCount}</div>
-          </div>
-
-          <div className="rounded-2xl border bg-white p-4">
-            <div className="text-sm text-gray-500">Completed</div>
-            <div className="text-3xl font-bold">{completedCount}</div>
-          </div>
-
-          <div className="rounded-2xl border bg-white p-4">
-            <div className="text-sm text-gray-500">Incomplete</div>
-            <div className="text-3xl font-bold">{incompleteCount}</div>
+          <div className="rounded-xl border bg-white p-4 text-center">
+            <div className="text-sm text-gray-700">Incomplete</div>
+            <div className="text-3xl font-bold text-red-600">
+              {incomplete}
+            </div>
           </div>
         </div>
 
-        {/* MISSED TASKS */}
-
-        {missedTasks.length > 0 && (
-          <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
-            <h2 className="mb-4 text-2xl font-semibold text-red-700">
-              Missed Tasks
-            </h2>
-
-            <div className="space-y-3">
-              {missedTasks.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-red-200 bg-white p-4"
-                >
-                  <div className="text-lg font-semibold">{item.task_name}</div>
-
-                  <div className="mt-1 text-sm text-gray-600">
-                    Section: {item.task_section}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* TASK LIST */}
-
-        <div className="space-y-8">
+        {/* SECTION BREAKDOWN */}
+        <div className="space-y-4">
           {sections.map((section) => {
-            const sectionItems =
-              data?.filter((item) => item.task_section === section) || [];
-
-            if (sectionItems.length === 0) return null;
+            const stats = getSectionStats(section);
+            if (stats.total === 0) return null;
 
             return (
-              <section key={section} className="rounded-2xl border bg-white p-5">
-                <h2 className="mb-4 text-2xl font-semibold">{section}</h2>
+              <div
+                key={section}
+                className="rounded-xl border bg-white p-5"
+              >
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {section}
+                </h2>
 
-                <div className="space-y-3">
-                  {sectionItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`rounded-xl border p-4 ${
-                        item.completed
-                          ? "border-green-200 bg-green-50"
-                          : "border-red-200 bg-red-50"
-                      }`}
-                    >
-                      <div className="text-xl font-semibold">
-                        {item.task_name}
-                      </div>
-
-                      <div className="mt-2 text-base">
-                        Status:{" "}
-                        <span className="font-medium">
-                          {item.completed ? "Completed" : "Incomplete"}
-                        </span>
-                      </div>
-
-                      <div className="text-base text-gray-700">
-                        Initials: {item.employee_initials || "—"}
-                      </div>
-
-                      <div className="text-sm text-gray-500">
-                        Completed at:{" "}
-                        {item.completed_at
-                          ? new Date(item.completed_at).toLocaleString()
-                          : "—"}
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-2 text-gray-700">
+                  {stats.completed} of {stats.total} completed
                 </div>
-              </section>
+              </div>
             );
           })}
+        </div>
+
+        {/* TASK LIST */}
+        <div className="space-y-4">
+          {items?.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-xl border bg-white p-4"
+            >
+              <div className="text-lg font-semibold text-gray-800">
+                {item.task_name}
+              </div>
+
+              <div className="text-gray-700">
+                Section: {item.task_section}
+              </div>
+
+              <div className="text-gray-700">
+                Status:{" "}
+                {item.completed ? "Completed" : "Not completed"}
+              </div>
+
+              {item.employee_initials && (
+                <div className="text-gray-700">
+                  By: {item.employee_initials}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </main>

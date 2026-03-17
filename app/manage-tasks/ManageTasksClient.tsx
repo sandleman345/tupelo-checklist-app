@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 type TaskTemplate = {
   id: number;
   task_name: string;
-  task_type: string;
   task_section: string | null;
   active: boolean;
   sort_order: number;
@@ -30,16 +29,6 @@ export default function ManageTasksClient({
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [message, setMessage] = useState("");
-  const [originalNames, setOriginalNames] = useState<Record<number, string>>(
-    Object.fromEntries(initialTasks.map((task) => [task.id, task.task_name]))
-  );
-
-  const [newTask, setNewTask] = useState({
-    task_name: "",
-    task_section: "Daily",
-    sort_order: initialTasks.length + 1,
-    weekday: "",
-  });
 
   const updateLocalTask = (
     id: number,
@@ -47,390 +36,144 @@ export default function ManageTasksClient({
     value: string | number | boolean | null
   ) => {
     setTasks((prev) =>
-      prev.map((task) => (task.id === id ? { ...task, [field]: value } : task))
+      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
     );
   };
 
   const saveTask = async (task: TaskTemplate) => {
-    const today = new Date().toISOString().split("T")[0];
-    const oldTaskName = originalNames[task.id] || task.task_name;
-    const newTaskType = task.task_section === "Weekly" ? "weekly" : "daily";
-
-    const { error: templateError } = await supabase
+    const { error } = await supabase
       .from("task_templates")
-      .update({
-        task_name: task.task_name,
-        task_type: newTaskType,
-        task_section: task.task_section,
-        active: task.active,
-        sort_order: task.sort_order,
-        weekday: task.task_section === "Weekly" ? task.weekday : null,
-      })
+      .update(task)
       .eq("id", task.id);
 
-    if (templateError) {
-      setMessage(`Error saving ${task.task_name}: ${templateError.message}`);
-      return;
-    }
-
-    const { error: checklistError } = await supabase
-      .from("checklist_items")
-      .update({
-        task_name: task.task_name,
-        task_type: newTaskType,
-        task_section: task.task_section,
-      })
-      .eq("checklist_date", today)
-      .eq("task_name", oldTaskName);
-
-    if (checklistError) {
-      setMessage(
-        `Saved template, but could not update today's checklist: ${checklistError.message}`
-      );
-      return;
-    }
-
-    setOriginalNames((prev) => ({
-      ...prev,
-      [task.id]: task.task_name,
-    }));
-
-    setMessage(`Saved: ${task.task_name}`);
+    setMessage(error ? "Error saving" : `Saved: ${task.task_name}`);
   };
 
   const deleteTask = async (id: number) => {
-    const task = tasks.find((t) => t.id === id);
-
-    const { error } = await supabase.from("task_templates").delete().eq("id", id);
-
-    if (error) {
-      setMessage(`Error deleting task: ${error.message}`);
-      return;
-    }
-
+    await supabase.from("task_templates").delete().eq("id", id);
     setTasks((prev) => prev.filter((t) => t.id !== id));
-    setMessage(`Deleted: ${task?.task_name || "task"}`);
-  };
-
-  const addTask = async () => {
-    if (!newTask.task_name.trim()) {
-      setMessage("Please enter a task name.");
-      return;
-    }
-
-    const weekdayValue =
-      newTask.task_section === "Weekly" && newTask.weekday !== ""
-        ? Number(newTask.weekday)
-        : null;
-
-    const { data, error } = await supabase
-      .from("task_templates")
-      .insert({
-        task_name: newTask.task_name,
-        task_type: newTask.task_section === "Weekly" ? "weekly" : "daily",
-        task_section: newTask.task_section,
-        active: true,
-        sort_order: Number(newTask.sort_order),
-        weekday: weekdayValue,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      setMessage(`Error adding task: ${error.message}`);
-      return;
-    }
-
-    const createdTask = data as TaskTemplate;
-
-    setTasks((prev) =>
-      [...prev, createdTask].sort((a, b) => a.sort_order - b.sort_order)
-    );
-
-    setOriginalNames((prev) => ({
-      ...prev,
-      [createdTask.id]: createdTask.task_name,
-    }));
-
-    setNewTask({
-      task_name: "",
-      task_section: "Daily",
-      sort_order: tasks.length + 2,
-      weekday: "",
-    });
-
-    setMessage(`Added: ${createdTask.task_name}`);
-  };
-
-  const regenerateTodayChecklist = async () => {
-    const confirmed = window.confirm(
-      "This will erase today's current checklist progress and rebuild it from the templates. Continue?"
-    );
-
-    if (!confirmed) return;
-
-    setMessage("Regenerating today's checklist...");
-
-    const now = new Date();
-    const today = now.toISOString().split("T")[0];
-    const weekday = now.getDay();
-
-    const { error: deleteError } = await supabase
-      .from("checklist_items")
-      .delete()
-      .eq("checklist_date", today);
-
-    if (deleteError) {
-      setMessage(`Error deleting today's checklist: ${deleteError.message}`);
-      return;
-    }
-
-    const { data: templates, error: templateError } = await supabase
-      .from("task_templates")
-      .select("task_name, task_type, task_section, sort_order, weekday")
-      .eq("active", true)
-      .order("sort_order", { ascending: true });
-
-    if (templateError) {
-      setMessage(`Error loading task templates: ${templateError.message}`);
-      return;
-    }
-
-    if (!templates || templates.length === 0) {
-      setMessage("No active templates found.");
-      return;
-    }
-
-    const filteredTemplates = templates.filter((task) => {
-      if (task.task_section !== "Weekly") return true;
-      return task.weekday === weekday;
-    });
-
-    const rowsToInsert = filteredTemplates.map((task) => ({
-      checklist_date: today,
-      task_name: task.task_name,
-      task_type: task.task_type,
-      task_section: task.task_section,
-      completed: false,
-      employee_initials: null,
-      completed_at: null,
-    }));
-
-    const { error: insertError } = await supabase
-      .from("checklist_items")
-      .insert(rowsToInsert);
-
-    if (insertError) {
-      setMessage(`Error rebuilding today's checklist: ${insertError.message}`);
-      return;
-    }
-
-    setMessage("Today's checklist has been regenerated successfully.");
-    window.location.href = "/";
   };
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-5">
-          <h1 className="text-3xl font-bold">Manage Tasks</h1>
-          <p className="mt-1 text-gray-600">
-            Add, edit, delete, and organize checklist tasks
-          </p>
+      <div className="border-b bg-white px-6 py-5">
+        <h1 className="text-3xl font-bold">Manage Tasks</h1>
 
-          <div className="mt-3 flex flex-wrap gap-3">
-            <a
-              href="/"
-              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Back to Checklist
-            </a>
+        <p className="mt-1 text-gray-700">
+          Edit and organize checklist tasks
+        </p>
 
-            <a
-              href="/manager"
-              className="inline-flex items-center rounded-xl border bg-white px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Manager View
-            </a>
+        <div className="mt-3 flex gap-3">
+          <a
+            href="/"
+            className="rounded-xl border bg-white px-4 py-2 font-medium"
+          >
+            Checklist
+          </a>
 
-            <button
-              onClick={regenerateTodayChecklist}
-              className="inline-flex items-center rounded-xl border bg-blue-50 px-4 py-2 text-base font-medium shadow-sm"
-            >
-              Regenerate Today&apos;s Checklist
-            </button>
-          </div>
-
-          {message && (
-            <div className="mt-4 rounded-xl border bg-white px-4 py-3 text-sm">
-              {message}
-            </div>
-          )}
+          <a
+            href="/manager"
+            className="rounded-xl border bg-white px-4 py-2 font-medium"
+          >
+            Manager
+          </a>
         </div>
+
+        {message && (
+          <div className="mt-4 rounded-xl border bg-white px-4 py-3 text-gray-800">
+            {message}
+          </div>
+        )}
       </div>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-        <section className="rounded-2xl border bg-white p-5">
-          <h2 className="mb-4 text-2xl font-semibold">Add New Task</h2>
-
-          <div className="grid gap-4 md:grid-cols-5">
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="rounded-xl border bg-white p-4"
+          >
             <input
-              type="text"
-              placeholder="Task name"
-              value={newTask.task_name}
+              value={task.task_name}
               onChange={(e) =>
-                setNewTask((prev) => ({ ...prev, task_name: e.target.value }))
+                updateLocalTask(task.id, "task_name", e.target.value)
               }
-              className="rounded-lg border px-3 py-2"
+              className="w-full rounded-lg border px-3 py-2 text-gray-800"
             />
 
-            <select
-              value={newTask.task_section}
-              onChange={(e) =>
-                setNewTask((prev) => ({ ...prev, task_section: e.target.value }))
-              }
-              className="rounded-lg border px-3 py-2"
-            >
-              <option>Daily</option>
-              <option>Nightly Closing</option>
-              <option>Weekly</option>
-            </select>
+            <div className="mt-3 grid gap-3 md:grid-cols-4">
+              <select
+                value={task.task_section || ""}
+                onChange={(e) =>
+                  updateLocalTask(task.id, "task_section", e.target.value)
+                }
+                className="rounded-lg border px-3 py-2"
+              >
+                <option>Daily</option>
+                <option>Nightly Closing</option>
+                <option>Weekly</option>
+              </select>
 
-            <input
-              type="number"
-              placeholder="Sort order"
-              value={newTask.sort_order}
-              onChange={(e) =>
-                setNewTask((prev) => ({
-                  ...prev,
-                  sort_order: Number(e.target.value),
-                }))
-              }
-              className="rounded-lg border px-3 py-2"
-            />
+              <input
+                type="number"
+                value={task.sort_order}
+                onChange={(e) =>
+                  updateLocalTask(
+                    task.id,
+                    "sort_order",
+                    Number(e.target.value)
+                  )
+                }
+                className="rounded-lg border px-3 py-2"
+              />
 
-            <select
-              value={newTask.weekday}
-              onChange={(e) =>
-                setNewTask((prev) => ({ ...prev, weekday: e.target.value }))
-              }
-              className="rounded-lg border px-3 py-2"
-              disabled={newTask.task_section !== "Weekly"}
-            >
-              <option value="">Weekday</option>
-              {weekdayOptions.map((day) => (
-                <option key={day.value} value={day.value}>
-                  {day.label}
-                </option>
-              ))}
-            </select>
+              <select
+                value={task.weekday ?? ""}
+                onChange={(e) =>
+                  updateLocalTask(
+                    task.id,
+                    "weekday",
+                    e.target.value === "" ? null : Number(e.target.value)
+                  )
+                }
+                className="rounded-lg border px-3 py-2"
+              >
+                <option value="">Weekday</option>
+                {weekdayOptions.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
 
-            <button
-              onClick={addTask}
-              className="rounded-lg border bg-white px-4 py-2 font-medium"
-            >
-              Add Task
-            </button>
+              <label className="flex items-center gap-2 text-gray-800">
+                <input
+                  type="checkbox"
+                  checked={task.active}
+                  onChange={(e) =>
+                    updateLocalTask(task.id, "active", e.target.checked)
+                  }
+                />
+                Active
+              </label>
+            </div>
+
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => saveTask(task)}
+                className="rounded-lg border px-4 py-2 font-medium"
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() => deleteTask(task.id)}
+                className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-red-700"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-        </section>
-
-        <section className="rounded-2xl border bg-white p-5">
-          <h2 className="mb-4 text-2xl font-semibold">Current Tasks</h2>
-
-          <div className="space-y-4">
-            {tasks.map((task) => (
-              <div key={task.id} className="rounded-xl border bg-gray-50 p-4">
-                <div className="grid gap-4 md:grid-cols-6">
-                  <input
-                    type="text"
-                    value={task.task_name}
-                    onChange={(e) =>
-                      updateLocalTask(task.id, "task_name", e.target.value)
-                    }
-                    className="rounded-lg border px-3 py-2 md:col-span-2"
-                  />
-
-                  <select
-                    value={task.task_section || ""}
-                    onChange={(e) => {
-                      const section = e.target.value;
-                      updateLocalTask(task.id, "task_section", section);
-                      updateLocalTask(
-                        task.id,
-                        "task_type",
-                        section === "Weekly" ? "weekly" : "daily"
-                      );
-                      if (section !== "Weekly") {
-                        updateLocalTask(task.id, "weekday", null);
-                      }
-                    }}
-                    className="rounded-lg border px-3 py-2"
-                  >
-                    <option>Daily</option>
-                    <option>Nightly Closing</option>
-                    <option>Weekly</option>
-                  </select>
-
-                  <input
-                    type="number"
-                    value={task.sort_order}
-                    onChange={(e) =>
-                      updateLocalTask(task.id, "sort_order", Number(e.target.value))
-                    }
-                    className="rounded-lg border px-3 py-2"
-                  />
-
-                  <select
-                    value={task.weekday ?? ""}
-                    onChange={(e) =>
-                      updateLocalTask(
-                        task.id,
-                        "weekday",
-                        e.target.value === "" ? null : Number(e.target.value)
-                      )
-                    }
-                    disabled={task.task_section !== "Weekly"}
-                    className="rounded-lg border px-3 py-2"
-                  >
-                    <option value="">Weekday</option>
-                    {weekdayOptions.map((day) => (
-                      <option key={day.value} value={day.value}>
-                        {day.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <label className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={task.active}
-                      onChange={(e) =>
-                        updateLocalTask(task.id, "active", e.target.checked)
-                      }
-                    />
-                    Active
-                  </label>
-                </div>
-
-                <div className="mt-4 flex gap-3">
-                  <button
-                    onClick={() => saveTask(task)}
-                    className="rounded-lg border bg-white px-4 py-2 font-medium"
-                  >
-                    Save
-                  </button>
-
-                  <button
-                    onClick={() => deleteTask(task.id)}
-                    className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 font-medium text-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        ))}
       </div>
     </main>
   );
