@@ -4,80 +4,84 @@ import ChecklistClient from "./ChecklistClient";
 import { supabase } from "@/lib/supabase";
 
 export default async function Home() {
-  const todayDate = new Date();
-  const today = todayDate.toISOString().split("T")[0];
-  const weekday = todayDate.getDay();
+  const today = new Date().toISOString().split("T")[0];
+  const weekday = new Date().getDay();
 
-  const existingChecklist = await supabase
+  let { data: items, error } = await supabase
     .from("checklist_items")
-    .select("id")
+    .select("*")
     .eq("checklist_date", today)
-    .limit(1);
+    .order("id", { ascending: true }); // ✅ FIXED
 
-  if (existingChecklist.error) {
+  if (error) {
     return (
-      <div className="p-8">
-        <h1 className="mb-4 text-2xl font-bold">Supabase Error</h1>
-        <p>{existingChecklist.error.message}</p>
-      </div>
+      <main className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-4xl rounded-2xl border bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-900">Checklist Error</h1>
+          <p className="mt-2 text-gray-800">{error.message}</p>
+        </div>
+      </main>
     );
   }
 
-  if (!existingChecklist.data || existingChecklist.data.length === 0) {
+  // 👉 AUTO CREATE TODAY'S CHECKLIST
+  if (!items || items.length === 0) {
     const { data: templates, error: templateError } = await supabase
       .from("task_templates")
-      .select("task_name, task_type, task_section, sort_order, weekday")
+      .select("*")
       .eq("active", true)
-      .or(`task_section.not.eq.Weekly,and(task_section.eq.Weekly,weekday.eq.${weekday})`)
       .order("sort_order", { ascending: true });
 
     if (templateError) {
       return (
-        <div className="p-8">
-          <h1 className="mb-4 text-2xl font-bold">Template Error</h1>
-          <p>{templateError.message}</p>
-        </div>
+        <main className="min-h-screen bg-gray-50 p-6">
+          <div className="mx-auto max-w-4xl rounded-2xl border bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">Template Error</h1>
+            <p className="mt-2 text-gray-800">{templateError.message}</p>
+          </div>
+        </main>
       );
     }
 
-    if (templates && templates.length > 0) {
-      const rowsToInsert = templates.map((task) => ({
-        checklist_date: today,
-        task_name: task.task_name,
-        task_type: task.task_type,
-        task_section: task.task_section,
-        completed: false,
-      }));
+    const filteredTemplates = templates?.filter((task) => {
+      if (task.task_section !== "Weekly") return true;
+      return task.weekday === weekday;
+    });
 
-      const { error: insertError } = await supabase
-        .from("checklist_items")
-        .insert(rowsToInsert);
+    const rowsToInsert = filteredTemplates?.map((task) => ({
+      checklist_date: today,
+      task_name: task.task_name,
+      task_type: task.task_type,
+      task_section: task.task_section,
+      completed: false,
+      employee_initials: null,
+      completed_at: null,
+    }));
 
-      if (insertError) {
-        return (
-          <div className="p-8">
-            <h1 className="mb-4 text-2xl font-bold">Insert Error</h1>
-            <p>{insertError.message}</p>
+    const { error: insertError } = await supabase
+      .from("checklist_items")
+      .insert(rowsToInsert || []);
+
+    if (insertError) {
+      return (
+        <main className="min-h-screen bg-gray-50 p-6">
+          <div className="mx-auto max-w-4xl rounded-2xl border bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-bold text-gray-900">Create Error</h1>
+            <p className="mt-2 text-gray-800">{insertError.message}</p>
           </div>
-        );
-      }
+        </main>
+      );
     }
+
+    // Reload
+    const reload = await supabase
+      .from("checklist_items")
+      .select("*")
+      .eq("checklist_date", today)
+      .order("id", { ascending: true }); // ✅ FIXED
+
+    items = reload.data || [];
   }
 
-  const { data, error } = await supabase
-    .from("checklist_items")
-    .select("*")
-    .eq("checklist_date", today)
-    .order("id", { ascending: true });
-
-  if (error) {
-    return (
-      <div className="p-8">
-        <h1 className="mb-4 text-2xl font-bold">Supabase Error</h1>
-        <p>{error.message}</p>
-      </div>
-    );
-  }
-
-  return <ChecklistClient initialItems={data || []} />;
+  return <ChecklistClient initialItems={items || []} />;
 }

@@ -63,7 +63,30 @@ export default async function ManagerPage(props: {
   const getSectionStats = (section: string) => {
     const sectionItems = items?.filter((i) => i.task_section === section) || [];
     const completedCount = sectionItems.filter((i) => i.completed).length;
-    return { completed: completedCount, total: sectionItems.length };
+    const totalCount = sectionItems.length;
+    const percent = totalCount
+      ? Math.round((completedCount / totalCount) * 100)
+      : 0;
+
+    return {
+      completed: completedCount,
+      total: totalCount,
+      percent,
+    };
+  };
+
+  const getColor = (section: string) => {
+    if (section === "Daily") return "bg-blue-500";
+    if (section === "Nightly Closing") return "bg-amber-500";
+    if (section === "Weekly") return "bg-green-500";
+    return "bg-gray-500";
+  };
+
+  const getHeaderColor = (section: string) => {
+    if (section === "Daily") return "text-blue-700";
+    if (section === "Nightly Closing") return "text-amber-700";
+    if (section === "Weekly") return "text-green-700";
+    return "text-gray-900";
   };
 
   return (
@@ -121,12 +144,29 @@ export default async function ManagerPage(props: {
           if (stats.total === 0) return null;
 
           return (
-            <div key={section} className="rounded-2xl border bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">
-                {section}
-              </h2>
-              <div className="mt-1 text-sm text-gray-800 sm:text-base">
-                {stats.completed} of {stats.total} completed
+            <div
+              key={section}
+              className="rounded-2xl border bg-white p-4 shadow-sm"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className={`text-lg font-semibold sm:text-xl ${getHeaderColor(section)}`}>
+                  {section}
+                </h2>
+
+                <div className="text-sm font-medium text-gray-800">
+                  {stats.completed} / {stats.total}
+                </div>
+              </div>
+
+              <div className="h-4 w-full rounded-full bg-gray-200">
+                <div
+                  className={`h-4 rounded-full transition-all ${getColor(section)}`}
+                  style={{ width: `${stats.percent}%` }}
+                />
+              </div>
+
+              <div className="mt-2 text-sm text-gray-800">
+                {stats.percent}% complete
               </div>
             </div>
           );
@@ -140,7 +180,10 @@ export default async function ManagerPage(props: {
       ) : (
         <div className="space-y-4">
           {items?.map((item) => (
-            <div key={item.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div
+              key={item.id}
+              className="rounded-2xl border bg-white p-4 shadow-sm"
+            >
               <div className="text-lg font-semibold text-gray-900">
                 {item.task_name}
               </div>
