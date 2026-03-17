@@ -22,10 +22,10 @@ export default function ChecklistClient({
   const [toastMessage, setToastMessage] = useState("");
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Daily: true,
-    "Nightly Closing": false,
-    Weekly: false,
-  });
+  Daily: false,
+  "Nightly Closing": false,
+  Weekly: false,
+});
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
