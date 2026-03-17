@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
-import ManagerControls from "./ManagerControls";
+import LogoutButton from "@/components/LogoutButton";
 
 type SearchParams = Promise<{ date?: string }>;
 
@@ -20,12 +20,32 @@ export default async function ManagerPage(props: {
     .eq("checklist_date", selectedDate)
     .order("id", { ascending: true });
 
+  const navButtons = (
+    <div className="flex flex-wrap gap-2">
+      <a
+        href="/"
+        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+      >
+        Back to Checklist
+      </a>
+
+      <a
+        href="/manage-tasks"
+        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+      >
+        Manage Tasks
+      </a>
+
+      <LogoutButton />
+    </div>
+  );
+
   if (error) {
     return (
       <AppShell
         title="Manager Dashboard"
         subtitle={`Viewing checklist for ${selectedDate}`}
-        rightSlot={<ManagerControls />}
+        rightSlot={navButtons}
       >
         <div className="rounded-2xl border bg-white p-4 text-gray-900 shadow-sm">
           Error: {error.message}
@@ -50,7 +70,7 @@ export default async function ManagerPage(props: {
     <AppShell
       title="Manager Dashboard"
       subtitle={`Viewing checklist for ${selectedDate}`}
-      rightSlot={<ManagerControls />}
+      rightSlot={navButtons}
     >
       <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
         <div>
@@ -82,12 +102,16 @@ export default async function ManagerPage(props: {
 
         <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
           <div className="text-sm font-medium text-gray-800">Completed</div>
-          <div className="mt-1 text-3xl font-bold text-green-700">{completed}</div>
+          <div className="mt-1 text-3xl font-bold text-green-700">
+            {completed}
+          </div>
         </div>
 
         <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
           <div className="text-sm font-medium text-gray-800">Incomplete</div>
-          <div className="mt-1 text-3xl font-bold text-red-700">{incomplete}</div>
+          <div className="mt-1 text-3xl font-bold text-red-700">
+            {incomplete}
+          </div>
         </div>
       </div>
 
