@@ -19,6 +19,7 @@ export default function ChecklistClient({
   initialItems: ChecklistItem[];
 }) {
   const [items, setItems] = useState(initialItems);
+  const [toastMessage, setToastMessage] = useState("");
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: true,
@@ -37,8 +38,20 @@ export default function ChecklistClient({
   const checklistDate = initialItems[0]?.checklist_date || today;
   const isReadOnly = checklistDate !== today;
 
+  const weeklyMessages = [
+    "Nice work!",
+    "Thank you!",
+    "Weekly task complete!",
+    "Great job staying on top of it!",
+    "Awesome — that helps a lot.",
+    "You’re keeping the shop running strong.",
+    "Great attention to detail!",
+  ];
+
   const updateInitials = async (id: number, initialsValue: string) => {
     if (isReadOnly) return;
+
+    const previousItem = items.find((item) => item.id === id);
 
     const cleanedInitials = initialsValue.toUpperCase().trim();
     const isCompleted = cleanedInitials.length > 0;
@@ -56,6 +69,22 @@ export default function ChecklistClient({
     );
 
     setItems(updatedItems);
+
+    if (
+      previousItem &&
+      previousItem.task_section === "Weekly" &&
+      !previousItem.completed &&
+      isCompleted
+    ) {
+      const randomMessage =
+        weeklyMessages[Math.floor(Math.random() * weeklyMessages.length)];
+
+      setToastMessage(randomMessage);
+
+      setTimeout(() => {
+        setToastMessage("");
+      }, 2500);
+    }
 
     await supabase
       .from("checklist_items")
@@ -281,6 +310,12 @@ export default function ChecklistClient({
           );
         })}
       </div>
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900 shadow-lg">
+          {toastMessage}
+        </div>
+      )}
     </main>
   );
 }
