@@ -3,20 +3,27 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 
-export default async function ManagerPage() {
+type SearchParams = Promise<{ date?: string }>;
+
+export default async function ManagerPage(props: {
+  searchParams?: SearchParams;
+}) {
+  const resolvedParams = (await props.searchParams) || {};
+
   const today = new Date().toISOString().split("T")[0];
+  const selectedDate = resolvedParams.date || today;
 
   const { data: items, error } = await supabase
     .from("checklist_items")
     .select("*")
-    .eq("checklist_date", today)
+    .eq("checklist_date", selectedDate)
     .order("id", { ascending: true });
 
   if (error) {
     return (
       <AppShell
         title="Manager Dashboard"
-        subtitle={`Date: ${today}`}
+        subtitle={`Date: ${selectedDate}`}
         rightSlot={
           <div className="flex flex-wrap gap-2">
             <a
@@ -73,9 +80,31 @@ export default async function ManagerPage() {
   return (
     <AppShell
       title="Manager Dashboard"
-      subtitle={`Date: ${today}`}
+      subtitle={`Viewing checklist for ${selectedDate}`}
       rightSlot={navButtons}
     >
+      <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-900">
+            Choose Date
+          </label>
+          <input
+            type="date"
+            name="date"
+            defaultValue={selectedDate}
+            max={today}
+            className="rounded-xl border bg-white px-3 py-2 text-gray-900"
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
+        >
+          View Date
+        </button>
+      </form>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
           <div className="text-sm font-medium text-gray-800">Total Tasks</div>
@@ -111,35 +140,41 @@ export default async function ManagerPage() {
         })}
       </div>
 
-      <div className="space-y-4">
-        {items?.map((item) => (
-          <div key={item.id} className="rounded-2xl border bg-white p-4 shadow-sm">
-            <div className="text-lg font-semibold text-gray-900">
-              {item.task_name}
-            </div>
+      {total === 0 ? (
+        <div className="rounded-2xl border bg-white p-6 text-gray-900 shadow-sm">
+          No checklist found for {selectedDate}.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items?.map((item) => (
+            <div key={item.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+              <div className="text-lg font-semibold text-gray-900">
+                {item.task_name}
+              </div>
 
-            <div className="mt-2 text-sm text-gray-800 sm:text-base">
-              Section: {item.task_section}
-            </div>
+              <div className="mt-2 text-sm text-gray-800 sm:text-base">
+                Section: {item.task_section}
+              </div>
 
-            <div className="mt-1 text-sm text-gray-800 sm:text-base">
-              Status: {item.completed ? "Completed" : "Not completed"}
-            </div>
-
-            {item.employee_initials && (
               <div className="mt-1 text-sm text-gray-800 sm:text-base">
-                By: {item.employee_initials}
+                Status: {item.completed ? "Completed" : "Not completed"}
               </div>
-            )}
 
-            {item.completed_at && (
-              <div className="mt-1 text-sm text-gray-700">
-                Completed at: {new Date(item.completed_at).toLocaleString()}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              {item.employee_initials && (
+                <div className="mt-1 text-sm text-gray-800 sm:text-base">
+                  By: {item.employee_initials}
+                </div>
+              )}
+
+              {item.completed_at && (
+                <div className="mt-1 text-sm text-gray-700">
+                  Completed at: {new Date(item.completed_at).toLocaleString()}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </AppShell>
   );
 }
