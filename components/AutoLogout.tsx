@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const AUTO_LOGOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+const AUTO_LOGOUT_MS = 30 * 60 * 1000; // 2 hours
 
 export default function AutoLogout() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
