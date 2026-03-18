@@ -22,10 +22,10 @@ export default function ChecklistClient({
   const [toastMessage, setToastMessage] = useState("");
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-  Daily: false,
-  "Nightly Closing": false,
-  Weekly: false,
-});
+    Daily: false,
+    "Nightly Closing": false,
+    Weekly: false,
+  });
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
@@ -34,7 +34,17 @@ export default function ChecklistClient({
     }));
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+
+  const today = now.toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
+
+  const weekdayName = now.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long",
+  });
+
   const checklistDate = initialItems[0]?.checklist_date || today;
   const isReadOnly = checklistDate !== today;
 
@@ -146,19 +156,7 @@ export default function ChecklistClient({
     return "border-gray-200 bg-gray-50";
   };
 
-  const getWeekday = () => {
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-
-    return days[new Date().getDay()];
-  };
+  const getWeekday = () => weekdayName;
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">

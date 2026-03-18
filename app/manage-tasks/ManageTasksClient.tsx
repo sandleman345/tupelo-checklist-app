@@ -45,6 +45,34 @@ export default function ManageTasksClient({
     weekday: "",
   });
 
+  const getEasternTodayAndWeekday = () => {
+    const now = new Date();
+
+    const today = now.toLocaleDateString("en-CA", {
+      timeZone: "America/New_York",
+    });
+
+    const weekdayName = now.toLocaleDateString("en-US", {
+      timeZone: "America/New_York",
+      weekday: "short",
+    });
+
+    const weekdayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+    return {
+      today,
+      weekday: weekdayMap[weekdayName],
+    };
+  };
+
   const updateLocalTask = (
     id: number,
     field: keyof TaskTemplate,
@@ -56,7 +84,8 @@ export default function ManageTasksClient({
   };
 
   const saveTask = async (task: TaskTemplate) => {
-    const today = new Date().toISOString().split("T")[0];
+    const { today } = getEasternTodayAndWeekday();
+
     const oldTaskName = originalNames[task.id] || task.task_name;
     const newTaskType = task.task_section === "Weekly" ? "weekly" : "daily";
 
@@ -175,9 +204,7 @@ export default function ManageTasksClient({
     setMessage("Regenerating...");
 
     try {
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
-      const weekday = now.getDay();
+      const { today, weekday } = getEasternTodayAndWeekday();
 
       await supabase
         .from("checklist_items")
