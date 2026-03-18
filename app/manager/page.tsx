@@ -11,7 +11,12 @@ export default async function ManagerPage(props: {
 }) {
   const resolvedParams = (await props.searchParams) || {};
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+
+  const today = now.toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
+
   const selectedDate = resolvedParams.date || today;
 
   const { data: items, error } = await supabase
@@ -149,7 +154,11 @@ export default async function ManagerPage(props: {
               className="rounded-2xl border bg-white p-4 shadow-sm"
             >
               <div className="mb-2 flex items-center justify-between">
-                <h2 className={`text-lg font-semibold sm:text-xl ${getHeaderColor(section)}`}>
+                <h2
+                  className={`text-lg font-semibold sm:text-xl ${getHeaderColor(
+                    section
+                  )}`}
+                >
                   {section}
                 </h2>
 
@@ -160,7 +169,9 @@ export default async function ManagerPage(props: {
 
               <div className="h-4 w-full rounded-full bg-gray-200">
                 <div
-                  className={`h-4 rounded-full transition-all ${getColor(section)}`}
+                  className={`h-4 rounded-full transition-all ${getColor(
+                    section
+                  )}`}
                   style={{ width: `${stats.percent}%` }}
                 />
               </div>
