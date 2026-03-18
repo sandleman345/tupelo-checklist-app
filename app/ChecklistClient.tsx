@@ -38,9 +38,9 @@ export default function ChecklistClient({
   const [completionEntryCount, setCompletionEntryCount] = useState(0);
   const [confettiPieces, setConfettiPieces] = useState<ConfettiPiece[]>([]);
   const [celebrationTheme, setCelebrationTheme] = useState<CelebrationTheme>({
-    border: "border-green-300",
-    text: "text-green-700",
-    bg: "bg-white",
+    border: "border-green-400",
+    text: "text-green-300",
+    bg: "bg-slate-900",
   });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -234,29 +234,29 @@ export default function ChecklistClient({
 
   const celebrationThemes: CelebrationTheme[] = [
     {
-      border: "border-green-300",
-      text: "text-green-700",
-      bg: "bg-white",
+      border: "border-green-400",
+      text: "text-green-300",
+      bg: "bg-slate-900",
     },
     {
-      border: "border-blue-300",
-      text: "text-blue-700",
-      bg: "bg-white",
+      border: "border-blue-400",
+      text: "text-blue-300",
+      bg: "bg-slate-900",
     },
     {
-      border: "border-amber-300",
-      text: "text-amber-700",
-      bg: "bg-white",
+      border: "border-amber-400",
+      text: "text-amber-300",
+      bg: "bg-slate-900",
     },
     {
-      border: "border-purple-300",
-      text: "text-purple-700",
-      bg: "bg-white",
+      border: "border-purple-400",
+      text: "text-purple-300",
+      bg: "bg-slate-900",
     },
     {
-      border: "border-pink-300",
-      text: "text-pink-700",
-      bg: "bg-white",
+      border: "border-pink-400",
+      text: "text-pink-300",
+      bg: "bg-slate-900",
     },
   ];
 
@@ -461,48 +461,48 @@ export default function ChecklistClient({
   };
 
   const getBarColor = (section: string) => {
-    if (section === "Daily") return "bg-blue-600";
-    if (section === "Nightly Closing") return "bg-amber-500";
-    if (section === "Weekly") return "bg-green-600";
-    return "bg-gray-500";
+    if (section === "Daily") return "bg-blue-500";
+    if (section === "Nightly Closing") return "bg-amber-400";
+    if (section === "Weekly") return "bg-green-500";
+    return "bg-slate-500";
   };
 
   const getHeaderColor = (section: string) => {
-    if (section === "Daily") return "text-blue-800";
-    if (section === "Nightly Closing") return "text-amber-800";
-    if (section === "Weekly") return "text-green-800";
-    return "text-gray-900";
+    if (section === "Daily") return "text-blue-300";
+    if (section === "Nightly Closing") return "text-amber-300";
+    if (section === "Weekly") return "text-green-300";
+    return "text-slate-100";
   };
 
   const getSectionCardColor = (section: string) => {
-    if (section === "Daily") return "bg-blue-50 border-blue-200";
-    if (section === "Nightly Closing") return "bg-amber-50 border-amber-200";
-    if (section === "Weekly") return "bg-green-50 border-green-200";
-    return "bg-white border-gray-200";
+    if (section === "Daily") return "bg-slate-900 border-blue-900";
+    if (section === "Nightly Closing") return "bg-slate-900 border-amber-900";
+    if (section === "Weekly") return "bg-slate-900 border-green-900";
+    return "bg-slate-900 border-slate-700";
   };
 
   const getCompletedTextColor = (section: string | null) => {
-    if (section === "Daily") return "text-blue-800";
-    if (section === "Nightly Closing") return "text-amber-800";
-    if (section === "Weekly") return "text-green-800";
-    return "text-gray-900";
+    if (section === "Daily") return "text-blue-300";
+    if (section === "Nightly Closing") return "text-amber-300";
+    if (section === "Weekly") return "text-green-300";
+    return "text-slate-100";
   };
 
   const getCompletedCardColor = (
     section: string | null,
     completed: boolean
   ) => {
-    if (!completed) return "border-gray-200 bg-white";
-    if (section === "Daily") return "border-blue-200 bg-blue-50";
-    if (section === "Nightly Closing") return "border-amber-200 bg-amber-50";
-    if (section === "Weekly") return "border-green-200 bg-green-50";
-    return "border-gray-200 bg-gray-50";
+    if (!completed) return "border-slate-700 bg-slate-800";
+    if (section === "Daily") return "border-blue-700 bg-blue-950/60";
+    if (section === "Nightly Closing") return "border-amber-700 bg-amber-950/50";
+    if (section === "Weekly") return "border-green-700 bg-green-950/50";
+    return "border-slate-700 bg-slate-700";
   };
 
   const getWeekday = () => weekdayName;
 
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
+    <main className="min-h-screen bg-slate-950 text-slate-100">
       <style jsx>{`
         @keyframes praise-pop {
           0% {
@@ -557,56 +557,56 @@ export default function ChecklistClient({
         }
 
         .confetti-0 {
-          background: #2563eb;
+          background: #60a5fa;
         }
         .confetti-1 {
-          background: #16a34a;
+          background: #4ade80;
         }
         .confetti-2 {
-          background: #f59e0b;
+          background: #fbbf24;
         }
         .confetti-3 {
-          background: #ef4444;
+          background: #f87171;
         }
         .confetti-4 {
-          background: #8b5cf6;
+          background: #a78bfa;
         }
         .confetti-5 {
-          background: #ec4899;
+          background: #f472b6;
         }
       `}</style>
 
-      <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
-        <h1 className="text-3xl font-bold text-gray-900">Tupelo Tea Checklist</h1>
-        <p className="text-gray-800">
+      <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950 px-6 py-4">
+        <h1 className="text-3xl font-bold text-slate-50">Tupelo Tea Checklist</h1>
+        <p className="text-slate-300">
           Enter initials in Completed By when a task is done
         </p>
 
-        <div className="mt-2 text-sm text-gray-800">
+        <div className="mt-2 text-sm text-slate-300">
           Checklist Date: {checklistDate}
         </div>
 
         {isReadOnly && (
-          <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div className="mt-3 rounded-xl border border-amber-700 bg-amber-950/50 px-4 py-3 text-sm text-amber-200">
             This checklist is from a previous day and is now read-only.
           </div>
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
-  <a
-    href="/manager"
-    className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-  >
-    History
-  </a>
+          <a
+            href="/manager"
+            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
+          >
+            History
+          </a>
 
-  <a
-    href="/manage-tasks"
-    className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-  >
-    Edit Tasks
-  </a>
-</div>
+          <a
+            href="/manage-tasks"
+            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
+          >
+            Edit Tasks
+          </a>
+        </div>
 
         <div className="mt-5 space-y-4">
           {sections.map((section) => {
@@ -615,7 +615,7 @@ export default function ChecklistClient({
 
             return (
               <div key={section}>
-                <div className="mb-1 flex justify-between text-sm font-medium text-gray-900">
+                <div className="mb-1 flex justify-between text-sm font-medium text-slate-100">
                   <span>
                     {section === "Weekly"
                       ? `Weekly (${getWeekday()}) Progress`
@@ -626,7 +626,7 @@ export default function ChecklistClient({
                   </span>
                 </div>
 
-                <div className="h-4 w-full rounded-full bg-gray-200">
+                <div className="h-4 w-full rounded-full bg-slate-800">
                   <div
                     className={`h-4 rounded-full transition-all ${getBarColor(
                       section
@@ -658,7 +658,7 @@ export default function ChecklistClient({
               <button
                 type="button"
                 onClick={() => toggleSection(section)}
-                className={`mb-4 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-left text-2xl font-semibold ${getHeaderColor(
+                className={`mb-4 flex w-full items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left text-2xl font-semibold ${getHeaderColor(
                   section
                 )}`}
               >
@@ -667,7 +667,7 @@ export default function ChecklistClient({
                   {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
                 </span>
 
-                <span className="text-sm text-gray-800">
+                <span className="text-sm text-slate-300">
                   {sectionItems.length} tasks
                 </span>
               </button>
@@ -682,7 +682,7 @@ export default function ChecklistClient({
                         item.completed
                       )}`}
                     >
-                      <div className="text-xl font-semibold text-gray-950">
+                      <div className="text-xl font-semibold text-slate-50">
                         {item.task_name}
                       </div>
 
@@ -691,7 +691,7 @@ export default function ChecklistClient({
                           className={`text-lg font-medium ${
                             item.completed
                               ? getCompletedTextColor(item.task_section)
-                              : "text-gray-900"
+                              : "text-slate-100"
                           }`}
                         >
                           {item.completed ? "Completed" : "Not completed"}
@@ -699,19 +699,23 @@ export default function ChecklistClient({
 
                         <input
                           type="text"
+                          inputMode="text"
+                          autoCapitalize="characters"
+                          autoCorrect="off"
+                          spellCheck={false}
                           placeholder="Completed By"
                           value={item.employee_initials || ""}
                           disabled={isReadOnly}
                           onChange={(e) =>
                             updateInitials(item.id, e.target.value)
                           }
-                          className="w-36 rounded-xl border border-gray-300 bg-white px-3 py-2 text-lg text-gray-950 disabled:bg-gray-100"
+                          className="h-16 w-48 rounded-2xl border-2 border-slate-500 bg-slate-950 px-4 py-3 text-center text-2xl font-bold tracking-widest text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none disabled:bg-slate-800"
                           maxLength={5}
                         />
                       </div>
 
                       {item.completed_at && (
-                        <div className="mt-3 text-sm text-gray-800">
+                        <div className="mt-3 text-sm text-slate-300">
                           Completed at:{" "}
                           {new Date(item.completed_at).toLocaleString()}
                         </div>
@@ -726,14 +730,14 @@ export default function ChecklistClient({
       </div>
 
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900 shadow-lg">
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-green-700 bg-slate-900 px-4 py-3 text-sm font-medium text-green-300 shadow-lg">
           {toastMessage}
         </div>
       )}
 
       {(bigPraiseMessage || confettiPieces.length > 0) && (
         <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-white/20" />
+          <div className="absolute inset-0 bg-black/30" />
 
           {confettiPieces.map((piece, index) => (
             <div
