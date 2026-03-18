@@ -20,6 +20,7 @@ export function middleware(request: NextRequest) {
 
   const loginUrl = new URL("/manager-login", request.url);
   loginUrl.searchParams.set("redirect", pathname);
+  loginUrl.searchParams.set("reason", "expired");
 
   return NextResponse.redirect(loginUrl);
 }

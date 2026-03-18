@@ -13,7 +13,7 @@ export default function LogoutButton() {
         return;
       }
 
-      window.location.href = "/manager-login";
+      window.location.href = "/manager-login?reason=logout";
     } catch {
       alert("Logout failed. Please try again.");
     }
