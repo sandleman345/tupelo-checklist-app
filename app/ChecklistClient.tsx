@@ -78,6 +78,10 @@ export default function ChecklistClient({
   const checklistDate = initialItems[0]?.checklist_date || today;
   const isReadOnly = checklistDate !== today;
 
+  const totalTasks = items.length;
+  const completedTasks = items.filter((item) => item.completed).length;
+  const incompleteTasks = totalTasks - completedTasks;
+
   const weeklyMessages = [
     "Nice work!",
     "Thank you!",
@@ -608,6 +612,35 @@ export default function ChecklistClient({
           </a>
         </div>
 
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+            <div className="text-sm font-medium text-slate-300">Total Tasks</div>
+            <div className="mt-1 text-3xl font-bold text-slate-50">
+              {totalTasks}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+            <div className="text-sm font-medium text-slate-300">Completed</div>
+            <div className="mt-1 text-3xl font-bold text-green-400">
+              {completedTasks}
+            </div>
+          </div>
+
+          <a
+            href="#checklist-sections"
+            className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm transition hover:bg-slate-800"
+          >
+            <div className="text-sm font-medium text-slate-300">Incomplete</div>
+            <div className="mt-1 text-3xl font-bold text-red-400">
+              {incompleteTasks}
+            </div>
+            <div className="mt-2 text-xs text-slate-400">
+              Jump to checklist
+            </div>
+          </a>
+        </div>
+
         <div className="mt-5 space-y-4">
           {sections.map((section) => {
             const stats = getSectionStats(section);
@@ -640,7 +673,10 @@ export default function ChecklistClient({
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-6">
+      <div
+        id="checklist-sections"
+        className="mx-auto max-w-5xl space-y-8 px-4 py-6"
+      >
         {sections.map((section) => {
           const sectionItems = items.filter(
             (item) => item.task_section === section
