@@ -278,10 +278,10 @@ export default function ManageTasksClient({
 
   return (
     <AppShell
-      title="Manage Tasks"
-      subtitle="Edit and organize checklist tasks"
-      rightSlot={navButtons}
-    >
+  title="Edit Tasks"
+  subtitle="Edit and organize checklist tasks"
+  rightSlot={navButtons}
+>
       {message && (
         <div className="mb-4 rounded-xl border bg-white px-4 py-2 text-gray-900">
           {message}

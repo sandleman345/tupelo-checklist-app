@@ -593,20 +593,20 @@ export default function ChecklistClient({
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href="/manager"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-          >
-            Manager View
-          </a>
+  <a
+    href="/manager"
+    className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
+  >
+    History
+  </a>
 
-          <a
-            href="/manage-tasks"
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-          >
-            Manage Tasks
-          </a>
-        </div>
+  <a
+    href="/manage-tasks"
+    className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
+  >
+    Edit Tasks
+  </a>
+</div>
 
         <div className="mt-5 space-y-4">
           {sections.map((section) => {

@@ -48,7 +48,7 @@ export default async function ManagerPage(props: {
   if (error) {
     return (
       <AppShell
-        title="Manager Dashboard"
+        title="Checklist History"
         subtitle={`Viewing checklist for ${selectedDate}`}
         rightSlot={navButtons}
       >
