@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import AutoLogout from "@/components/AutoLogout";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import LogoutButton from "@/components/LogoutButton";
+import AutoLogout from "@/components/AutoLogout";
 
 type SearchParams = Promise<{ date?: string }>;
 
@@ -30,16 +30,16 @@ export default async function ManagerPage(props: {
     <div className="flex flex-wrap gap-2">
       <a
         href="/"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
       >
         Back to Checklist
       </a>
 
       <a
         href="/manage-tasks"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
       >
-        Manage Tasks
+        Edit Tasks
       </a>
 
       <LogoutButton />
@@ -48,15 +48,27 @@ export default async function ManagerPage(props: {
 
   if (error) {
     return (
-      <AppShell
-        title="Checklist History"
-        subtitle={`Viewing checklist for ${selectedDate}`}
-        rightSlot={navButtons}
-      >
-        <div className="rounded-2xl border bg-white p-4 text-gray-900 shadow-sm">
-          Error: {error.message}
+      <main className="min-h-screen bg-slate-950 text-slate-100">
+        <div className="border-b border-slate-800 bg-slate-950 px-6 py-4">
+          <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-50">
+                Checklist History
+              </h1>
+              <p className="mt-1 text-slate-300">
+                Viewing checklist for {selectedDate}
+              </p>
+            </div>
+            {navButtons}
+          </div>
         </div>
-      </AppShell>
+
+        <div className="mx-auto max-w-6xl px-4 py-6">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100 shadow-sm">
+            Error: {error.message}
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -83,148 +95,160 @@ export default async function ManagerPage(props: {
 
   const getColor = (section: string) => {
     if (section === "Daily") return "bg-blue-500";
-    if (section === "Nightly Closing") return "bg-amber-500";
+    if (section === "Nightly Closing") return "bg-amber-400";
     if (section === "Weekly") return "bg-green-500";
-    return "bg-gray-500";
+    return "bg-slate-500";
   };
 
   const getHeaderColor = (section: string) => {
-    if (section === "Daily") return "text-blue-700";
-    if (section === "Nightly Closing") return "text-amber-700";
-    if (section === "Weekly") return "text-green-700";
-    return "text-gray-900";
+    if (section === "Daily") return "text-blue-300";
+    if (section === "Nightly Closing") return "text-amber-300";
+    if (section === "Weekly") return "text-green-300";
+    return "text-slate-100";
   };
 
   return (
-    <AppShell
-  title="Manager Dashboard"
-  subtitle={`Viewing checklist for ${selectedDate}`}
-  rightSlot={navButtons}
->
-  <AutoLogout />
-
-  <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-900">
-            Choose Date
-          </label>
-          <input
-            type="date"
-            name="date"
-            defaultValue={selectedDate}
-            max={today}
-            className="rounded-xl border bg-white px-3 py-2 text-gray-900"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-        >
-          View Date
-        </button>
-      </form>
-
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
-          <div className="text-sm font-medium text-gray-800">Total Tasks</div>
-          <div className="mt-1 text-3xl font-bold text-gray-900">{total}</div>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
-          <div className="text-sm font-medium text-gray-800">Completed</div>
-          <div className="mt-1 text-3xl font-bold text-green-700">
-            {completed}
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950 px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-50">
+              Checklist History
+            </h1>
+            <p className="mt-1 text-slate-300">
+              Viewing checklist for {selectedDate}
+            </p>
           </div>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-4 text-center shadow-sm">
-          <div className="text-sm font-medium text-gray-800">Incomplete</div>
-          <div className="mt-1 text-3xl font-bold text-red-700">
-            {incomplete}
-          </div>
+          {navButtons}
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4">
-        {sections.map((section) => {
-          const stats = getSectionStats(section);
-          if (stats.total === 0) return null;
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <AutoLogout />
 
-          return (
-            <div
-              key={section}
-              className="rounded-2xl border bg-white p-4 shadow-sm"
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <h2
-                  className={`text-lg font-semibold sm:text-xl ${getHeaderColor(
-                    section
-                  )}`}
-                >
-                  {section}
-                </h2>
+        <form className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:flex-row sm:items-end">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-100">
+              Choose Date
+            </label>
+            <input
+              type="date"
+              name="date"
+              defaultValue={selectedDate}
+              max={today}
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            />
+          </div>
 
-                <div className="text-sm font-medium text-gray-800">
-                  {stats.completed} / {stats.total}
+          <button
+            type="submit"
+            className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
+          >
+            View Date
+          </button>
+        </form>
+
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+            <div className="text-sm font-medium text-slate-300">Total Tasks</div>
+            <div className="mt-1 text-3xl font-bold text-slate-50">{total}</div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+            <div className="text-sm font-medium text-slate-300">Completed</div>
+            <div className="mt-1 text-3xl font-bold text-green-400">
+              {completed}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+            <div className="text-sm font-medium text-slate-300">Incomplete</div>
+            <div className="mt-1 text-3xl font-bold text-red-400">
+              {incomplete}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 grid gap-4">
+          {sections.map((section) => {
+            const stats = getSectionStats(section);
+            if (stats.total === 0) return null;
+
+            return (
+              <div
+                key={section}
+                className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <h2
+                    className={`text-lg font-semibold sm:text-xl ${getHeaderColor(
+                      section
+                    )}`}
+                  >
+                    {section}
+                  </h2>
+
+                  <div className="text-sm font-medium text-slate-300">
+                    {stats.completed} / {stats.total}
+                  </div>
+                </div>
+
+                <div className="h-4 w-full rounded-full bg-slate-800">
+                  <div
+                    className={`h-4 rounded-full transition-all ${getColor(
+                      section
+                    )}`}
+                    style={{ width: `${stats.percent}%` }}
+                  />
+                </div>
+
+                <div className="mt-2 text-sm text-slate-300">
+                  {stats.percent}% complete
                 </div>
               </div>
+            );
+          })}
+        </div>
 
-              <div className="h-4 w-full rounded-full bg-gray-200">
-                <div
-                  className={`h-4 rounded-full transition-all ${getColor(
-                    section
-                  )}`}
-                  style={{ width: `${stats.percent}%` }}
-                />
-              </div>
+        {total === 0 ? (
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-6 text-slate-100 shadow-sm">
+            No checklist found for {selectedDate}.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {items?.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm"
+              >
+                <div className="text-lg font-semibold text-slate-50">
+                  {item.task_name}
+                </div>
 
-              <div className="mt-2 text-sm text-gray-800">
-                {stats.percent}% complete
+                <div className="mt-2 text-sm text-slate-300 sm:text-base">
+                  Section: {item.task_section}
+                </div>
+
+                <div className="mt-1 text-sm text-slate-300 sm:text-base">
+                  Status: {item.completed ? "Completed" : "Not completed"}
+                </div>
+
+                {item.employee_initials && (
+                  <div className="mt-1 text-sm text-slate-300 sm:text-base">
+                    By: {item.employee_initials}
+                  </div>
+                )}
+
+                {item.completed_at && (
+                  <div className="mt-1 text-sm text-slate-400">
+                    Completed at: {new Date(item.completed_at).toLocaleString()}
+                  </div>
+                )}
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        )}
       </div>
-
-      {total === 0 ? (
-        <div className="rounded-2xl border bg-white p-6 text-gray-900 shadow-sm">
-          No checklist found for {selectedDate}.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {items?.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl border bg-white p-4 shadow-sm"
-            >
-              <div className="text-lg font-semibold text-gray-900">
-                {item.task_name}
-              </div>
-
-              <div className="mt-2 text-sm text-gray-800 sm:text-base">
-                Section: {item.task_section}
-              </div>
-
-              <div className="mt-1 text-sm text-gray-800 sm:text-base">
-                Status: {item.completed ? "Completed" : "Not completed"}
-              </div>
-
-              {item.employee_initials && (
-                <div className="mt-1 text-sm text-gray-800 sm:text-base">
-                  By: {item.employee_initials}
-                </div>
-              )}
-
-              {item.completed_at && (
-                <div className="mt-1 text-sm text-gray-700">
-                  Completed at: {new Date(item.completed_at).toLocaleString()}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </AppShell>
+    </main>
   );
 }

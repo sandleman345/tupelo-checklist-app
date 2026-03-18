@@ -1,10 +1,9 @@
 "use client";
 
-import AutoLogout from "@/components/AutoLogout";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import AppShell from "@/components/AppShell";
 import LogoutButton from "@/components/LogoutButton";
+import AutoLogout from "@/components/AutoLogout";
 
 type TaskTemplate = {
   id: number;
@@ -249,16 +248,16 @@ export default function ManageTasksClient({
     <div className="flex flex-wrap gap-2">
       <a
         href="/"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
       >
         Checklist
       </a>
 
       <a
         href="/manager"
-        className="rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
       >
-        Manager
+        History
       </a>
 
       <LogoutButton />
@@ -268,8 +267,8 @@ export default function ManageTasksClient({
         disabled={isRegenerating}
         className={`rounded-xl border px-4 py-2 text-sm font-medium shadow-sm ${
           isRegenerating
-            ? "cursor-not-allowed bg-gray-200 text-gray-500"
-            : "bg-blue-50 hover:bg-blue-100"
+            ? "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500"
+            : "border-blue-700 bg-blue-950/40 text-blue-200 hover:bg-blue-900/50"
         }`}
       >
         {isRegenerating ? "Regenerating..." : "Regenerate Today"}
@@ -278,184 +277,197 @@ export default function ManageTasksClient({
   );
 
   return (
-    <AppShell
-  title="Edit Tasks"
-  subtitle="Edit and organize checklist tasks"
-  rightSlot={navButtons}
->
-  <AutoLogout />
-
-  {message && (
-        <div className="mb-4 rounded-xl border bg-white px-4 py-2 text-gray-900">
-          {message}
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950 px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-50">Edit Tasks</h1>
+            <p className="mt-1 text-slate-300">
+              Edit and organize checklist tasks
+            </p>
+          </div>
+          {navButtons}
         </div>
-      )}
+      </div>
 
-      <section className="mb-6 rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900 sm:text-2xl">
-          Add New Task
-        </h2>
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <AutoLogout />
 
-        <div className="grid gap-4 md:grid-cols-5">
-          <input
-            type="text"
-            placeholder="Task name"
-            value={newTask.task_name}
-            onChange={(e) =>
-              setNewTask((prev) => ({ ...prev, task_name: e.target.value }))
-            }
-            className="rounded-xl border px-3 py-2 text-gray-900"
-          />
+        {message && (
+          <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-slate-100">
+            {message}
+          </div>
+        )}
 
-          <select
-            value={newTask.task_section}
-            onChange={(e) =>
-              setNewTask((prev) => ({ ...prev, task_section: e.target.value }))
-            }
-            className="rounded-xl border px-3 py-2 text-gray-900"
-          >
-            <option>Daily</option>
-            <option>Nightly Closing</option>
-            <option>Weekly</option>
-          </select>
+        <section className="mb-6 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:p-5">
+          <h2 className="mb-4 text-xl font-semibold text-slate-50 sm:text-2xl">
+            Add New Task
+          </h2>
 
-          <input
-            type="number"
-            placeholder="Sort order"
-            value={newTask.sort_order}
-            onChange={(e) =>
-              setNewTask((prev) => ({
-                ...prev,
-                sort_order: Number(e.target.value),
-              }))
-            }
-            className="rounded-xl border px-3 py-2 text-gray-900"
-          />
+          <div className="grid gap-4 md:grid-cols-5">
+            <input
+              type="text"
+              placeholder="Task name"
+              value={newTask.task_name}
+              onChange={(e) =>
+                setNewTask((prev) => ({ ...prev, task_name: e.target.value }))
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 placeholder:text-slate-400"
+            />
 
-          <select
-            value={newTask.weekday}
-            onChange={(e) =>
-              setNewTask((prev) => ({ ...prev, weekday: e.target.value }))
-            }
-            className="rounded-xl border px-3 py-2 text-gray-900"
-            disabled={newTask.task_section !== "Weekly"}
-          >
-            <option value="">Weekday</option>
-            {weekdayOptions.map((day) => (
-              <option key={day.value} value={day.value}>
-                {day.label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={newTask.task_section}
+              onChange={(e) =>
+                setNewTask((prev) => ({ ...prev, task_section: e.target.value }))
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            >
+              <option>Daily</option>
+              <option>Nightly Closing</option>
+              <option>Weekly</option>
+            </select>
 
-          <button
-            onClick={addTask}
-            className="rounded-xl border bg-white px-4 py-2 font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-          >
-            Add Task
-          </button>
-        </div>
-      </section>
+            <input
+              type="number"
+              placeholder="Sort order"
+              value={newTask.sort_order}
+              onChange={(e) =>
+                setNewTask((prev) => ({
+                  ...prev,
+                  sort_order: Number(e.target.value),
+                }))
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            />
 
-      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900 sm:text-2xl">
-          Current Tasks
-        </h2>
+            <select
+              value={newTask.weekday}
+              onChange={(e) =>
+                setNewTask((prev) => ({ ...prev, weekday: e.target.value }))
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+              disabled={newTask.task_section !== "Weekly"}
+            >
+              <option value="">Weekday</option>
+              {weekdayOptions.map((day) => (
+                <option key={day.value} value={day.value}>
+                  {day.label}
+                </option>
+              ))}
+            </select>
 
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <div key={task.id} className="rounded-2xl border bg-gray-50 p-4">
-              <div className="grid gap-4 md:grid-cols-6">
-                <input
-                  type="text"
-                  value={task.task_name}
-                  onChange={(e) =>
-                    updateLocalTask(task.id, "task_name", e.target.value)
-                  }
-                  className="rounded-xl border bg-white px-3 py-2 text-gray-900 md:col-span-2"
-                />
+            <button
+              onClick={addTask}
+              className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 font-medium text-slate-100 shadow-sm hover:bg-slate-800"
+            >
+              Add Task
+            </button>
+          </div>
+        </section>
 
-                <select
-                  value={task.task_section || ""}
-                  onChange={(e) => {
-                    const section = e.target.value;
-                    updateLocalTask(task.id, "task_section", section);
-                    updateLocalTask(
-                      task.id,
-                      "task_type",
-                      section === "Weekly" ? "weekly" : "daily"
-                    );
-                    if (section !== "Weekly") {
-                      updateLocalTask(task.id, "weekday", null);
-                    }
-                  }}
-                  className="rounded-xl border bg-white px-3 py-2 text-gray-900"
-                >
-                  <option>Daily</option>
-                  <option>Nightly Closing</option>
-                  <option>Weekly</option>
-                </select>
+        <section className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:p-5">
+          <h2 className="mb-4 text-xl font-semibold text-slate-50 sm:text-2xl">
+            Current Tasks
+          </h2>
 
-                <input
-                  type="number"
-                  value={task.sort_order}
-                  onChange={(e) =>
-                    updateLocalTask(task.id, "sort_order", Number(e.target.value))
-                  }
-                  className="rounded-xl border bg-white px-3 py-2 text-gray-900"
-                />
-
-                <select
-                  value={task.weekday ?? ""}
-                  onChange={(e) =>
-                    updateLocalTask(
-                      task.id,
-                      "weekday",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={task.task_section !== "Weekly"}
-                  className="rounded-xl border bg-white px-3 py-2 text-gray-900"
-                >
-                  <option value="">Weekday</option>
-                  {weekdayOptions.map((day) => (
-                    <option key={day.value} value={day.value}>
-                      {day.label}
-                    </option>
-                  ))}
-                </select>
-
-                <label className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-gray-900">
+          <div className="space-y-4">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="rounded-2xl border border-slate-700 bg-slate-800 p-4"
+              >
+                <div className="grid gap-4 md:grid-cols-6">
                   <input
-                    type="checkbox"
-                    checked={task.active}
+                    type="text"
+                    value={task.task_name}
                     onChange={(e) =>
-                      updateLocalTask(task.id, "active", e.target.checked)
+                      updateLocalTask(task.id, "task_name", e.target.value)
                     }
+                    className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 md:col-span-2"
                   />
-                  Active
-                </label>
-              </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  onClick={() => saveTask(task)}
-                  className="rounded-xl border bg-white px-4 py-2 font-medium text-gray-900 shadow-sm hover:bg-gray-50"
-                >
-                  Save
-                </button>
+                  <select
+                    value={task.task_section || ""}
+                    onChange={(e) => {
+                      const section = e.target.value;
+                      updateLocalTask(task.id, "task_section", section);
+                      updateLocalTask(
+                        task.id,
+                        "task_type",
+                        section === "Weekly" ? "weekly" : "daily"
+                      );
+                      if (section !== "Weekly") {
+                        updateLocalTask(task.id, "weekday", null);
+                      }
+                    }}
+                    className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+                  >
+                    <option>Daily</option>
+                    <option>Nightly Closing</option>
+                    <option>Weekly</option>
+                  </select>
 
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="rounded-xl border border-red-300 bg-red-50 px-4 py-2 font-medium text-red-700 shadow-sm hover:bg-red-100"
-                >
-                  Delete
-                </button>
+                  <input
+                    type="number"
+                    value={task.sort_order}
+                    onChange={(e) =>
+                      updateLocalTask(task.id, "sort_order", Number(e.target.value))
+                    }
+                    className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+                  />
+
+                  <select
+                    value={task.weekday ?? ""}
+                    onChange={(e) =>
+                      updateLocalTask(
+                        task.id,
+                        "weekday",
+                        e.target.value === "" ? null : Number(e.target.value)
+                      )
+                    }
+                    disabled={task.task_section !== "Weekly"}
+                    className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+                  >
+                    <option value="">Weekday</option>
+                    {weekdayOptions.map((day) => (
+                      <option key={day.value} value={day.value}>
+                        {day.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={task.active}
+                      onChange={(e) =>
+                        updateLocalTask(task.id, "active", e.target.checked)
+                      }
+                    />
+                    Active
+                  </label>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => saveTask(task)}
+                    className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 font-medium text-slate-100 shadow-sm hover:bg-slate-700"
+                  >
+                    Save
+                  </button>
+
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="rounded-xl border border-red-700 bg-red-950/40 px-4 py-2 font-medium text-red-300 shadow-sm hover:bg-red-900/50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </AppShell>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
