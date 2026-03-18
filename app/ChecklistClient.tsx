@@ -640,37 +640,6 @@ export default function ChecklistClient({
             </div>
           </a>
         </div>
-
-        <div className="mt-5 space-y-4">
-          {sections.map((section) => {
-            const stats = getSectionStats(section);
-            if (stats.total === 0) return null;
-
-            return (
-              <div key={section}>
-                <div className="mb-1 flex justify-between text-sm font-medium text-slate-100">
-                  <span>
-                    {section === "Weekly"
-                      ? `Weekly (${getWeekday()}) Progress`
-                      : `${section} Progress`}
-                  </span>
-                  <span>
-                    {stats.completed} / {stats.total}
-                  </span>
-                </div>
-
-                <div className="h-4 w-full rounded-full bg-slate-800">
-                  <div
-                    className={`h-4 rounded-full transition-all ${getBarColor(
-                      section
-                    )}`}
-                    style={{ width: `${stats.percent}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       <div
@@ -683,6 +652,8 @@ export default function ChecklistClient({
           );
 
           if (sectionItems.length === 0) return null;
+
+          const stats = getSectionStats(section);
 
           return (
             <section
@@ -707,6 +678,24 @@ export default function ChecklistClient({
                   {sectionItems.length} tasks
                 </span>
               </button>
+
+              <div className="mb-4">
+                <div className="mb-1 flex justify-between text-sm font-medium text-slate-200">
+                  <span>Progress</span>
+                  <span>
+                    {stats.completed} / {stats.total}
+                  </span>
+                </div>
+
+                <div className="h-4 w-full rounded-full bg-slate-800">
+                  <div
+                    className={`h-4 rounded-full transition-all ${getBarColor(
+                      section
+                    )}`}
+                    style={{ width: `${stats.percent}%` }}
+                  />
+                </div>
+              </div>
 
               {openSections[section] ? (
                 <div className="space-y-4">
