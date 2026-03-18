@@ -20,6 +20,8 @@ export default function ChecklistClient({
 }) {
   const [items, setItems] = useState(initialItems);
   const [toastMessage, setToastMessage] = useState("");
+  const [bigPraiseMessage, setBigPraiseMessage] = useState("");
+  const [completionEntryCount, setCompletionEntryCount] = useState(0);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: false,
@@ -58,6 +60,133 @@ export default function ChecklistClient({
     "Great attention to detail!",
   ];
 
+  const praiseMessages = [
+    "Awesome job!",
+    "Way to go!",
+    "Fantastic work!",
+    "You’re crushing it!",
+    "Excellent momentum!",
+    "Nice hustle!",
+    "Great teamwork!",
+    "Outstanding effort!",
+    "You’re on fire!",
+    "Keep it up!",
+    "Boom! Nice work!",
+    "That’s how it’s done!",
+    "Wonderful job!",
+    "Great energy!",
+    "Sharp work!",
+    "You nailed it!",
+    "Super job!",
+    "Beautiful work!",
+    "Strong finish!",
+    "That was excellent!",
+    "You’re doing great!",
+    "Rockstar move!",
+    "Impressive work!",
+    "Big win!",
+    "Love the consistency!",
+    "A job well done!",
+    "Great pace!",
+    "You’ve got this!",
+    "Very nicely done!",
+    "Fantastic effort!",
+    "That helped a lot!",
+    "Amazing attention to detail!",
+    "Great follow-through!",
+    "Top-notch work!",
+    "Excellent focus!",
+    "Really well done!",
+    "You’re making it happen!",
+    "Great consistency!",
+    "That’s a win!",
+    "Awesome momentum!",
+    "You’re unstoppable!",
+    "Excellent progress!",
+    "Huge help!",
+    "That was strong work!",
+    "You’re doing awesome!",
+    "Fantastic job today!",
+    "Great dedication!",
+    "Excellent execution!",
+    "That looked great!",
+    "Powerful work!",
+    "Great commitment!",
+    "That’s the spirit!",
+    "Quality work!",
+    "So well done!",
+    "You’re shining!",
+    "Excellent contribution!",
+    "Nice attention to detail!",
+    "Great rhythm!",
+    "That was smooth!",
+    "You handled that perfectly!",
+    "Strong effort!",
+    "Very impressive!",
+    "You’re making a difference!",
+    "Keep the streak going!",
+    "That’s real teamwork!",
+    "Exceptional effort!",
+    "Love that energy!",
+    "Clean work!",
+    "Brilliant job!",
+    "Great store pride!",
+    "Wonderful effort!",
+    "That was a big help!",
+    "Excellent follow-up!",
+    "High five!",
+    "You’re building momentum!",
+    "This is great work!",
+    "Nice consistency!",
+    "That was spot on!",
+    "Awesome follow-through!",
+    "You’re doing fantastic!",
+    "That’s the way!",
+    "Perfectly done!",
+    "Incredible job!",
+    "Strong job today!",
+    "Great attention!",
+    "You’re really helping!",
+    "Impressive pace!",
+    "That’s a solid win!",
+    "You’ve got real momentum!",
+    "Very strong work!",
+    "You’re on a roll!",
+    "Excellent teamwork!",
+    "Great care and effort!",
+    "That deserves a cheer!",
+    "Phenomenal job!",
+    "That was excellent work!",
+    "You’re keeping things moving!",
+    "What a great job!",
+    "That was worth celebrating!",
+    "Fantastic teamwork!",
+    "Great work out there!",
+    "You’re doing an amazing job!",
+  ];
+
+  const showWeeklyToast = () => {
+    const randomMessage =
+      weeklyMessages[Math.floor(Math.random() * weeklyMessages.length)];
+
+    setToastMessage(randomMessage);
+
+    setTimeout(() => {
+      setToastMessage("");
+    }, 2500);
+  };
+
+  const showBigPraise = () => {
+    const randomMessage =
+      praiseMessages[Math.floor(Math.random() * praiseMessages.length)];
+
+    setBigPraiseMessage(randomMessage);
+
+    setTimeout(() => {
+      setBigPraiseMessage("");
+    }, 2200);
+  };
+
   const updateInitials = async (id: number, initialsValue: string) => {
     if (isReadOnly) return;
 
@@ -80,20 +209,28 @@ export default function ChecklistClient({
 
     setItems(updatedItems);
 
+    const becameCompleted =
+      previousItem && !previousItem.completed && isCompleted;
+
     if (
       previousItem &&
       previousItem.task_section === "Weekly" &&
       !previousItem.completed &&
       isCompleted
     ) {
-      const randomMessage =
-        weeklyMessages[Math.floor(Math.random() * weeklyMessages.length)];
+      showWeeklyToast();
+    }
 
-      setToastMessage(randomMessage);
+    if (becameCompleted) {
+      setCompletionEntryCount((prev) => {
+        const nextCount = prev + 1;
 
-      setTimeout(() => {
-        setToastMessage("");
-      }, 2500);
+        if (nextCount % 5 === 0) {
+          showBigPraise();
+        }
+
+        return nextCount;
+      });
     }
 
     await supabase
@@ -312,6 +449,16 @@ export default function ChecklistClient({
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900 shadow-lg">
           {toastMessage}
+        </div>
+      )}
+
+      {bigPraiseMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+          <div className="mx-6 max-w-2xl rounded-3xl border-2 border-green-300 bg-white px-8 py-8 text-center shadow-2xl">
+            <div className="text-3xl font-bold text-green-700 sm:text-5xl">
+              {bigPraiseMessage}
+            </div>
+          </div>
         </div>
       )}
     </main>
