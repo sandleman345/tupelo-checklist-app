@@ -13,6 +13,20 @@ type ChecklistItem = {
   completed_at: string | null;
 };
 
+type ConfettiPiece = {
+  id: number;
+  left: number;
+  delay: number;
+  duration: number;
+  rotate: number;
+};
+
+type CelebrationTheme = {
+  border: string;
+  text: string;
+  bg: string;
+};
+
 export default function ChecklistClient({
   initialItems,
 }: {
@@ -22,6 +36,12 @@ export default function ChecklistClient({
   const [toastMessage, setToastMessage] = useState("");
   const [bigPraiseMessage, setBigPraiseMessage] = useState("");
   const [completionEntryCount, setCompletionEntryCount] = useState(0);
+  const [confettiPieces, setConfettiPieces] = useState<ConfettiPiece[]>([]);
+  const [celebrationTheme, setCelebrationTheme] = useState<CelebrationTheme>({
+    border: "border-green-300",
+    text: "text-green-700",
+    bg: "bg-white",
+  });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: false,
@@ -47,6 +67,14 @@ export default function ChecklistClient({
     weekday: "long",
   });
 
+  const hourInEastern = Number(
+    now.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    })
+  );
+
   const checklistDate = initialItems[0]?.checklist_date || today;
   const isReadOnly = checklistDate !== today;
 
@@ -60,7 +88,46 @@ export default function ChecklistClient({
     "Great attention to detail!",
   ];
 
-  const praiseMessages = [
+  const morningPraiseMessages = [
+    "Great start to the day!",
+    "Morning momentum!",
+    "You’re off to a strong start!",
+    "Excellent opening energy!",
+    "Way to kick things off!",
+    "Bright start, great work!",
+    "Strong morning pace!",
+    "You’re setting the tone!",
+    "Fantastic start today!",
+    "Nice morning win!",
+  ];
+
+  const afternoonPraiseMessages = [
+    "Strong momentum!",
+    "You’re keeping it moving!",
+    "Fantastic pace this afternoon!",
+    "You’re doing great out there!",
+    "Way to keep the energy up!",
+    "Great midday push!",
+    "Excellent follow-through!",
+    "You’re in the groove!",
+    "Nice afternoon win!",
+    "Keep it rolling!",
+  ];
+
+  const eveningPraiseMessages = [
+    "Finishing strong!",
+    "Great job closing it out!",
+    "Excellent evening effort!",
+    "You’re ending the day strong!",
+    "Strong finish!",
+    "Way to keep pushing!",
+    "Fantastic closeout energy!",
+    "You’re wrapping this up beautifully!",
+    "Great evening momentum!",
+    "What a strong finish!",
+  ];
+
+  const anytimePraiseMessages = [
     "Awesome job!",
     "Way to go!",
     "Fantastic work!",
@@ -165,6 +232,89 @@ export default function ChecklistClient({
     "You’re doing an amazing job!",
   ];
 
+  const celebrationThemes: CelebrationTheme[] = [
+    {
+      border: "border-green-300",
+      text: "text-green-700",
+      bg: "bg-white",
+    },
+    {
+      border: "border-blue-300",
+      text: "text-blue-700",
+      bg: "bg-white",
+    },
+    {
+      border: "border-amber-300",
+      text: "text-amber-700",
+      bg: "bg-white",
+    },
+    {
+      border: "border-purple-300",
+      text: "text-purple-700",
+      bg: "bg-white",
+    },
+    {
+      border: "border-pink-300",
+      text: "text-pink-700",
+      bg: "bg-white",
+    },
+  ];
+
+  const playCelebrationSound = () => {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }).webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        1320,
+        audioContext.currentTime + 0.12
+      );
+
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.04,
+        audioContext.currentTime + 0.02
+      );
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioContext.currentTime + 0.28
+      );
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch {
+      // ignore audio failures
+    }
+  };
+
+  const getSmartPraiseMessage = () => {
+    let timeBasedPool = anytimePraiseMessages;
+
+    if (hourInEastern < 12) {
+      timeBasedPool = [...morningPraiseMessages, ...anytimePraiseMessages];
+    } else if (hourInEastern < 17) {
+      timeBasedPool = [...afternoonPraiseMessages, ...anytimePraiseMessages];
+    } else {
+      timeBasedPool = [...eveningPraiseMessages, ...anytimePraiseMessages];
+    }
+
+    return timeBasedPool[Math.floor(Math.random() * timeBasedPool.length)];
+  };
+
   const showWeeklyToast = () => {
     const randomMessage =
       weeklyMessages[Math.floor(Math.random() * weeklyMessages.length)];
@@ -176,15 +326,66 @@ export default function ChecklistClient({
     }, 2500);
   };
 
-  const showBigPraise = () => {
-    const randomMessage =
-      praiseMessages[Math.floor(Math.random() * praiseMessages.length)];
+  const launchConfetti = (count = 28) => {
+    const pieces: ConfettiPiece[] = Array.from({ length: count }, (_, index) => ({
+      id: Date.now() + index,
+      left: Math.random() * 100,
+      delay: Math.random() * 0.35,
+      duration: 1.8 + Math.random() * 1.4,
+      rotate: Math.floor(Math.random() * 360),
+    }));
 
+    setConfettiPieces(pieces);
+
+    setTimeout(() => {
+      setConfettiPieces([]);
+    }, 3200);
+  };
+
+  const showBigPraise = () => {
+    const randomMessage = getSmartPraiseMessage();
+    const randomTheme =
+      celebrationThemes[
+        Math.floor(Math.random() * celebrationThemes.length)
+      ];
+
+    setCelebrationTheme(randomTheme);
     setBigPraiseMessage(randomMessage);
+    launchConfetti(28);
+    playCelebrationSound();
 
     setTimeout(() => {
       setBigPraiseMessage("");
     }, 2200);
+  };
+
+  const showAllTasksCompletePraise = () => {
+    const completionMessages = [
+      "🎉 ALL TASKS COMPLETE 🎉",
+      "Everything is complete!",
+      "Checklist finished — amazing work!",
+      "100% complete — fantastic job!",
+      "You did it — all tasks are done!",
+    ];
+
+    const randomTheme =
+      celebrationThemes[
+        Math.floor(Math.random() * celebrationThemes.length)
+      ];
+
+    const randomMessage =
+      completionMessages[
+        Math.floor(Math.random() * completionMessages.length)
+      ];
+
+    setCelebrationTheme(randomTheme);
+    setBigPraiseMessage(randomMessage);
+    launchConfetti(42);
+    playCelebrationSound();
+
+    setTimeout(() => {
+      setBigPraiseMessage("");
+    }, 2800);
   };
 
   const updateInitials = async (id: number, initialsValue: string) => {
@@ -231,6 +432,11 @@ export default function ChecklistClient({
 
         return nextCount;
       });
+
+      const allNowCompleted = updatedItems.every((item) => item.completed);
+      if (allNowCompleted && updatedItems.length > 0) {
+        showAllTasksCompletePraise();
+      }
     }
 
     await supabase
@@ -297,6 +503,79 @@ export default function ChecklistClient({
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">
+      <style jsx>{`
+        @keyframes praise-pop {
+          0% {
+            opacity: 0;
+            transform: scale(0.86) translateY(14px);
+          }
+          18% {
+            opacity: 1;
+            transform: scale(1.04) translateY(0);
+          }
+          78% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.96) translateY(-8px);
+          }
+        }
+
+        @keyframes confetti-fall {
+          0% {
+            opacity: 0;
+            transform: translateY(-20px) rotate(0deg);
+          }
+          10% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(240px) rotate(540deg);
+          }
+        }
+
+        .praise-pop {
+          animation: praise-pop 2.2s ease-out forwards;
+        }
+
+        .all-complete-pop {
+          animation: praise-pop 2.8s ease-out forwards;
+        }
+
+        .confetti-piece {
+          position: absolute;
+          top: -10px;
+          width: 10px;
+          height: 18px;
+          border-radius: 3px;
+          animation-name: confetti-fall;
+          animation-timing-function: ease-out;
+          animation-fill-mode: forwards;
+        }
+
+        .confetti-0 {
+          background: #2563eb;
+        }
+        .confetti-1 {
+          background: #16a34a;
+        }
+        .confetti-2 {
+          background: #f59e0b;
+        }
+        .confetti-3 {
+          background: #ef4444;
+        }
+        .confetti-4 {
+          background: #8b5cf6;
+        }
+        .confetti-5 {
+          background: #ec4899;
+        }
+      `}</style>
+
       <div className="sticky top-0 z-10 border-b bg-white px-6 py-4">
         <h1 className="text-3xl font-bold text-gray-900">Tupelo Tea Checklist</h1>
         <p className="text-gray-800">
@@ -452,13 +731,40 @@ export default function ChecklistClient({
         </div>
       )}
 
-      {bigPraiseMessage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-          <div className="mx-6 max-w-2xl rounded-3xl border-2 border-green-300 bg-white px-8 py-8 text-center shadow-2xl">
-            <div className="text-3xl font-bold text-green-700 sm:text-5xl">
-              {bigPraiseMessage}
+      {(bigPraiseMessage || confettiPieces.length > 0) && (
+        <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-white/20" />
+
+          {confettiPieces.map((piece, index) => (
+            <div
+              key={piece.id}
+              className={`confetti-piece confetti-${index % 6}`}
+              style={{
+                left: `${piece.left}%`,
+                animationDelay: `${piece.delay}s`,
+                animationDuration: `${piece.duration}s`,
+                transform: `rotate(${piece.rotate}deg)`,
+              }}
+            />
+          ))}
+
+          {bigPraiseMessage && (
+            <div
+              className={`relative mx-6 max-w-2xl rounded-3xl border-2 px-8 py-8 text-center shadow-2xl ${
+                bigPraiseMessage.includes("ALL TASKS COMPLETE") ||
+                bigPraiseMessage.includes("Everything is complete") ||
+                bigPraiseMessage.includes("100% complete")
+                  ? `all-complete-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
+                  : `praise-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
+              }`}
+            >
+              <div
+                className={`text-3xl font-bold sm:text-5xl ${celebrationTheme.text}`}
+              >
+                {bigPraiseMessage}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </main>
