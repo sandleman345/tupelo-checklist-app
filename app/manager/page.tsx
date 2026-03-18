@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import AutoLogout from "@/components/AutoLogout";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import LogoutButton from "@/components/LogoutButton";
@@ -96,11 +97,13 @@ export default async function ManagerPage(props: {
 
   return (
     <AppShell
-      title="Manager Dashboard"
-      subtitle={`Viewing checklist for ${selectedDate}`}
-      rightSlot={navButtons}
-    >
-      <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
+  title="Manager Dashboard"
+  subtitle={`Viewing checklist for ${selectedDate}`}
+  rightSlot={navButtons}
+>
+  <AutoLogout />
+
+  <form className="mb-6 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-end">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-900">
             Choose Date

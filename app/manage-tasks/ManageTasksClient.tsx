@@ -1,5 +1,6 @@
 "use client";
 
+import AutoLogout from "@/components/AutoLogout";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
@@ -282,7 +283,9 @@ export default function ManageTasksClient({
   subtitle="Edit and organize checklist tasks"
   rightSlot={navButtons}
 >
-      {message && (
+  <AutoLogout />
+
+  {message && (
         <div className="mb-4 rounded-xl border bg-white px-4 py-2 text-gray-900">
           {message}
         </div>
