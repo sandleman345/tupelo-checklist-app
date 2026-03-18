@@ -4,14 +4,36 @@ import ChecklistClient from "./ChecklistClient";
 import { supabase } from "@/lib/supabase";
 
 export default async function Home() {
-  const today = new Date().toISOString().split("T")[0];
-  const weekday = new Date().getDay();
+  const now = new Date();
+
+  // ✅ Eastern Time date
+  const today = now.toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
+
+  // ✅ Eastern Time weekday (clean version)
+  const weekdayName = now.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  });
+
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  const weekday = weekdayMap[weekdayName];
 
   let { data: items, error } = await supabase
     .from("checklist_items")
     .select("*")
     .eq("checklist_date", today)
-    .order("id", { ascending: true }); // ✅ FIXED
+    .order("id", { ascending: true });
 
   if (error) {
     return (
@@ -24,7 +46,7 @@ export default async function Home() {
     );
   }
 
-  // 👉 AUTO CREATE TODAY'S CHECKLIST
+  // ✅ AUTO CREATE TODAY'S CHECKLIST
   if (!items || items.length === 0) {
     const { data: templates, error: templateError } = await supabase
       .from("task_templates")
@@ -73,12 +95,12 @@ export default async function Home() {
       );
     }
 
-    // Reload
+    // ✅ Reload after insert
     const reload = await supabase
       .from("checklist_items")
       .select("*")
       .eq("checklist_date", today)
-      .order("id", { ascending: true }); // ✅ FIXED
+      .order("id", { ascending: true });
 
     items = reload.data || [];
   }
