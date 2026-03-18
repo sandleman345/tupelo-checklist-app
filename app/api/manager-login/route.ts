@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
 
   response.cookies.set("manager-auth", "true", {
     httpOnly: true,
-    secure: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 12,
+    secure: process.env.NODE_ENV === "production",
   });
 
   return response;

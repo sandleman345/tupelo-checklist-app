@@ -2,11 +2,21 @@
 
 export default function LogoutButton() {
   const handleLogout = async () => {
-    await fetch("/api/manager-logout", {
-      method: "POST",
-    });
+    try {
+      const response = await fetch("/api/manager-logout", {
+        method: "POST",
+        cache: "no-store",
+      });
 
-    window.location.href = "/manager-login";
+      if (!response.ok) {
+        alert("Logout failed. Please try again.");
+        return;
+      }
+
+      window.location.href = "/manager-login";
+    } catch {
+      alert("Logout failed. Please try again.");
+    }
   };
 
   return (
