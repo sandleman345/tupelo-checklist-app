@@ -76,6 +76,7 @@ export default async function ManagerPage(props: {
   const completed = safeItems.filter((i) => i.completed).length;
   const incomplete = total - completed;
   const missedTasks = safeItems.filter((i) => !i.completed);
+  const completedTasks = safeItems.filter((i) => i.completed);
 
   const sections = ["Daily", "Nightly Closing", "Weekly"];
 
@@ -150,27 +151,27 @@ export default async function ManagerPage(props: {
         </form>
 
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
             <div className="text-sm font-medium text-slate-300">Total Tasks</div>
-            <div className="mt-1 text-3xl font-bold text-slate-50">{total}</div>
+            <div className="mt-0.5 text-2xl font-bold text-slate-50">{total}</div>
           </div>
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
             <div className="text-sm font-medium text-slate-300">Completed</div>
-            <div className="mt-1 text-3xl font-bold text-green-400">
+            <div className="mt-0.5 text-2xl font-bold text-green-400">
               {completed}
             </div>
           </div>
 
           <a
             href="#missed-tasks"
-            className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm transition hover:bg-slate-800"
+            className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm transition hover:bg-slate-800"
           >
             <div className="text-sm font-medium text-slate-300">Incomplete</div>
-            <div className="mt-1 text-3xl font-bold text-red-400">
+            <div className="mt-0.5 text-2xl font-bold text-red-400">
               {incomplete}
             </div>
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="mt-1 text-xs text-slate-400">
               Jump to missed tasks
             </div>
           </a>
@@ -217,12 +218,20 @@ export default async function ManagerPage(props: {
           })}
         </div>
 
-        <section
+        <details
           id="missed-tasks"
           className="mb-6 rounded-2xl border border-red-900 bg-red-950/20 p-5 shadow-sm"
         >
-          <h2 className="text-2xl font-bold text-red-300">Missed Tasks</h2>
-          <p className="mt-1 text-slate-300">
+          <summary className="cursor-pointer list-none text-2xl font-bold text-red-300">
+            <div className="flex items-center justify-between">
+              <span>Missed Tasks</span>
+              <span className="text-sm font-medium text-slate-300">
+                {missedTasks.length} tasks
+              </span>
+            </div>
+          </summary>
+
+          <p className="mt-2 text-slate-300">
             Tasks not completed for {selectedDate}
           </p>
 
@@ -252,46 +261,61 @@ export default async function ManagerPage(props: {
               ))}
             </div>
           )}
-        </section>
+        </details>
 
-        {total === 0 ? (
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-6 text-slate-100 shadow-sm">
-            No checklist found for {selectedDate}.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {safeItems.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm"
-              >
-                <div className="text-lg font-semibold text-slate-50">
-                  {item.task_name}
-                </div>
+        <details className="mb-6 rounded-2xl border border-green-900 bg-green-950/10 p-5 shadow-sm">
+          <summary className="cursor-pointer list-none text-2xl font-bold text-green-300">
+            <div className="flex items-center justify-between">
+              <span>Completed Tasks</span>
+              <span className="text-sm font-medium text-slate-300">
+                {completedTasks.length} tasks
+              </span>
+            </div>
+          </summary>
 
-                <div className="mt-2 text-sm text-slate-300 sm:text-base">
-                  Section: {item.task_section}
-                </div>
+          <p className="mt-2 text-slate-300">
+            Tasks completed for {selectedDate}
+          </p>
 
-                <div className="mt-1 text-sm text-slate-300 sm:text-base">
-                  Status: {item.completed ? "Completed" : "Not completed"}
-                </div>
-
-                {item.employee_initials && (
-                  <div className="mt-1 text-sm text-slate-300 sm:text-base">
-                    By: {item.employee_initials}
+          {completedTasks.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-300">
+              No completed tasks for this date.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {completedTasks.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-slate-700 bg-slate-900 p-4"
+                >
+                  <div className="text-lg font-semibold text-slate-50">
+                    {item.task_name}
                   </div>
-                )}
 
-                {item.completed_at && (
-                  <div className="mt-1 text-sm text-slate-400">
-                    Completed at: {new Date(item.completed_at).toLocaleString()}
+                  <div className="mt-1 text-sm text-slate-300">
+                    Section: {item.task_section}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+
+                  <div className="mt-1 text-sm text-green-300">
+                    Status: Completed
+                  </div>
+
+                  {item.employee_initials && (
+                    <div className="mt-1 text-sm text-slate-300">
+                      By: {item.employee_initials}
+                    </div>
+                  )}
+
+                  {item.completed_at && (
+                    <div className="mt-1 text-sm text-slate-400">
+                      Completed at: {new Date(item.completed_at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </details>
       </div>
     </main>
   );
