@@ -72,7 +72,7 @@ export default function ChecklistClient({
     timeZone: "America/New_York",
   });
 
-  const weekdayName = now.toLocaleDateString("en-US", {
+    const weekdayName = now.toLocaleDateString("en-US", {
     timeZone: "America/New_York",
     weekday: "long",
   });
@@ -84,6 +84,26 @@ export default function ChecklistClient({
       hour12: false,
     })
   );
+
+  // 🌿 Subtle daily accent system
+  const accentStyles = [
+    { symbol: "🍃", color: "text-green-300" },
+    { symbol: "✦", color: "text-amber-300" },
+    { symbol: "❈", color: "text-lime-300" },
+    { symbol: "✷", color: "text-rose-300" },
+    { symbol: "✺", color: "text-sky-300" },
+    { symbol: "❋", color: "text-emerald-300" },
+  ];
+
+  const accentIndex =
+    Number(
+      now.toLocaleDateString("en-US", {
+        timeZone: "America/New_York",
+        day: "numeric",
+      })
+    ) % accentStyles.length;
+
+  const todayAccent = accentStyles[accentIndex];
 
   const checklistDate = initialItems[0]?.checklist_date || today;
   const isReadOnly = checklistDate !== today;
@@ -581,7 +601,20 @@ export default function ChecklistClient({
       `}</style>
 
       <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950 px-6 py-4">
-        <h1 className="text-3xl font-bold text-slate-50">Tupelo Tea Checklist</h1>
+       
+       <div className="flex items-center gap-2">
+  <span className={`text-lg ${todayAccent.color}`}>
+    {todayAccent.symbol}
+  </span>
+
+  <h1 className="text-3xl font-bold text-slate-50">
+    Tupelo Tea Checklist
+  </h1>
+
+  <span className={`text-lg ${todayAccent.color}`}>
+    {todayAccent.symbol}
+  </span>
+</div>
         <p className="text-slate-300">
           Tap your initials to complete a task
         </p>
