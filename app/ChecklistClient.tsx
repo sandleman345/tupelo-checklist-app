@@ -13,6 +13,14 @@ type ChecklistItem = {
   completed_at: string | null;
 };
 
+type TeamMember = {
+  id: string;
+  initials: string;
+  name: string | null;
+  active: boolean;
+  sort_order: number;
+};
+
 type ConfettiPiece = {
   id: number;
   left: number;
@@ -29,8 +37,10 @@ type CelebrationTheme = {
 
 export default function ChecklistClient({
   initialItems,
+  teamMembers,
 }: {
   initialItems: ChecklistItem[];
+  teamMembers: TeamMember[];
 }) {
   const [items, setItems] = useState(initialItems);
   const [toastMessage, setToastMessage] = useState("");
@@ -237,31 +247,11 @@ export default function ChecklistClient({
   ];
 
   const celebrationThemes: CelebrationTheme[] = [
-    {
-      border: "border-green-400",
-      text: "text-green-300",
-      bg: "bg-slate-900",
-    },
-    {
-      border: "border-blue-400",
-      text: "text-blue-300",
-      bg: "bg-slate-900",
-    },
-    {
-      border: "border-amber-400",
-      text: "text-amber-300",
-      bg: "bg-slate-900",
-    },
-    {
-      border: "border-purple-400",
-      text: "text-purple-300",
-      bg: "bg-slate-900",
-    },
-    {
-      border: "border-pink-400",
-      text: "text-pink-300",
-      bg: "bg-slate-900",
-    },
+    { border: "border-green-400", text: "text-green-300", bg: "bg-slate-900" },
+    { border: "border-blue-400", text: "text-blue-300", bg: "bg-slate-900" },
+    { border: "border-amber-400", text: "text-amber-300", bg: "bg-slate-900" },
+    { border: "border-purple-400", text: "text-purple-300", bg: "bg-slate-900" },
+    { border: "border-pink-400", text: "text-pink-300", bg: "bg-slate-900" },
   ];
 
   const playCelebrationSound = () => {
@@ -301,7 +291,7 @@ export default function ChecklistClient({
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.3);
     } catch {
-      // ignore audio failures
+      // ignore
     }
   };
 
@@ -349,9 +339,7 @@ export default function ChecklistClient({
   const showBigPraise = () => {
     const randomMessage = getSmartPraiseMessage();
     const randomTheme =
-      celebrationThemes[
-        Math.floor(Math.random() * celebrationThemes.length)
-      ];
+      celebrationThemes[Math.floor(Math.random() * celebrationThemes.length)];
 
     setCelebrationTheme(randomTheme);
     setBigPraiseMessage(randomMessage);
@@ -373,10 +361,7 @@ export default function ChecklistClient({
     ];
 
     const randomTheme =
-      celebrationThemes[
-        Math.floor(Math.random() * celebrationThemes.length)
-      ];
-
+      celebrationThemes[Math.floor(Math.random() * celebrationThemes.length)];
     const randomMessage =
       completionMessages[
         Math.floor(Math.random() * completionMessages.length)
@@ -498,9 +483,24 @@ export default function ChecklistClient({
   ) => {
     if (!completed) return "border-slate-700 bg-slate-800";
     if (section === "Daily") return "border-blue-700 bg-blue-950/60";
-    if (section === "Nightly Closing") return "border-amber-700 bg-amber-950/50";
+    if (section === "Nightly Closing") {
+      return "border-amber-700 bg-amber-950/50";
+    }
     if (section === "Weekly") return "border-green-700 bg-green-950/50";
     return "border-slate-700 bg-slate-700";
+  };
+
+  const getSelectedMemberButtonClasses = (section: string | null) => {
+    if (section === "Daily") {
+      return "border-blue-400 bg-blue-500 text-white scale-105";
+    }
+    if (section === "Nightly Closing") {
+      return "border-amber-300 bg-amber-400 text-slate-950 scale-105";
+    }
+    if (section === "Weekly") {
+      return "border-green-400 bg-green-500 text-white scale-105";
+    }
+    return "border-slate-300 bg-slate-300 text-slate-950 scale-105";
   };
 
   const getWeekday = () => weekdayName;
@@ -583,7 +583,7 @@ export default function ChecklistClient({
       <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950 px-6 py-4">
         <h1 className="text-3xl font-bold text-slate-50">Tupelo Tea Checklist</h1>
         <p className="text-slate-300">
-          Enter initials in Completed By when a task is done
+          Tap your initials to complete a task
         </p>
 
         <div className="mt-2 text-sm text-slate-300">
@@ -613,29 +613,29 @@ export default function ChecklistClient({
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
             <div className="text-sm font-medium text-slate-300">Total Tasks</div>
-            <div className="mt-1 text-3xl font-bold text-slate-50">
+            <div className="mt-0.5 text-2xl font-bold text-slate-50">
               {totalTasks}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm">
+          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
             <div className="text-sm font-medium text-slate-300">Completed</div>
-            <div className="mt-1 text-3xl font-bold text-green-400">
+            <div className="mt-0.5 text-2xl font-bold text-green-400">
               {completedTasks}
             </div>
           </div>
 
           <a
             href="#checklist-sections"
-            className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center shadow-sm transition hover:bg-slate-800"
+            className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm transition hover:bg-slate-800"
           >
             <div className="text-sm font-medium text-slate-300">Incomplete</div>
-            <div className="mt-1 text-3xl font-bold text-red-400">
+            <div className="mt-0.5 text-2xl font-bold text-red-400">
               {incompleteTasks}
             </div>
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="mt-1 text-xs text-slate-400">
               Jump to checklist
             </div>
           </a>
@@ -711,7 +711,7 @@ export default function ChecklistClient({
                         {item.task_name}
                       </div>
 
-                      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="mt-4 flex flex-col gap-4">
                         <div
                           className={`text-lg font-medium ${
                             item.completed
@@ -722,25 +722,46 @@ export default function ChecklistClient({
                           {item.completed ? "Completed" : "Not completed"}
                         </div>
 
-                        <input
-                          type="text"
-                          inputMode="text"
-                          autoCapitalize="characters"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          placeholder="Completed By"
-                          value={item.employee_initials || ""}
-                          disabled={isReadOnly}
-                          onChange={(e) =>
-                            updateInitials(item.id, e.target.value)
-                          }
-                          className="h-16 w-48 rounded-2xl border-2 border-slate-500 bg-slate-950 px-4 py-3 text-center text-2xl font-bold tracking-widest text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none disabled:bg-slate-800"
-                          maxLength={5}
-                        />
+                        <div className="flex flex-wrap gap-3">
+                          {teamMembers.map((member) => {
+                            const isSelected =
+                              item.employee_initials === member.initials;
+
+                            return (
+                              <button
+                                key={member.id}
+                                type="button"
+                                title={member.name || member.initials}
+                                disabled={isReadOnly}
+                                onClick={() =>
+                                  updateInitials(
+                                    item.id,
+                                    isSelected ? "" : member.initials
+                                  )
+                                }
+                                className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold tracking-wide transition-all ${
+                                  isSelected
+                                    ? getSelectedMemberButtonClasses(
+                                        item.task_section
+                                      )
+                                    : "border-slate-600 bg-slate-900 text-slate-200 hover:bg-slate-800"
+                                } ${isReadOnly ? "opacity-70" : ""}`}
+                              >
+                                {member.initials}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {item.completed_at && (
+                      {item.employee_initials && (
                         <div className="mt-3 text-sm text-slate-300">
+                          Completed by: {item.employee_initials}
+                        </div>
+                      )}
+
+                      {item.completed_at && (
+                        <div className="mt-1 text-sm text-slate-300">
                           Completed at:{" "}
                           {new Date(item.completed_at).toLocaleString()}
                         </div>

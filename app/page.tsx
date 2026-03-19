@@ -6,12 +6,10 @@ import { supabase } from "@/lib/supabase";
 export default async function Home() {
   const now = new Date();
 
-  // ✅ Eastern Time date
   const today = now.toLocaleDateString("en-CA", {
     timeZone: "America/New_York",
   });
 
-  // ✅ Eastern Time weekday (clean version)
   const weekdayName = now.toLocaleDateString("en-US", {
     timeZone: "America/New_York",
     weekday: "short",
@@ -46,7 +44,6 @@ export default async function Home() {
     );
   }
 
-  // ✅ AUTO CREATE TODAY'S CHECKLIST
   if (!items || items.length === 0) {
     const { data: templates, error: templateError } = await supabase
       .from("task_templates")
@@ -95,7 +92,6 @@ export default async function Home() {
       );
     }
 
-    // ✅ Reload after insert
     const reload = await supabase
       .from("checklist_items")
       .select("*")
@@ -105,5 +101,16 @@ export default async function Home() {
     items = reload.data || [];
   }
 
-  return <ChecklistClient initialItems={items || []} />;
+  const { data: teamMembers } = await supabase
+    .from("team_members")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
+  return (
+    <ChecklistClient
+      initialItems={items || []}
+      teamMembers={teamMembers || []}
+    />
+  );
 }

@@ -15,6 +15,14 @@ type TaskTemplate = {
   weekday: number | null;
 };
 
+type TeamMember = {
+  id: string;
+  initials: string;
+  name: string | null;
+  active: boolean;
+  sort_order: number;
+};
+
 const weekdayOptions = [
   { label: "Sunday", value: 0 },
   { label: "Monday", value: 1 },
@@ -27,10 +35,13 @@ const weekdayOptions = [
 
 export default function ManageTasksClient({
   initialTasks,
+  initialTeamMembers = [],
 }: {
   initialTasks: TaskTemplate[];
+  initialTeamMembers?: TeamMember[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
   const [message, setMessage] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
 
@@ -43,6 +54,12 @@ export default function ManageTasksClient({
     task_section: "Daily",
     sort_order: initialTasks.length + 1,
     weekday: "",
+  });
+
+  const [newTeamMember, setNewTeamMember] = useState({
+    initials: "",
+    name: "",
+    sort_order: initialTeamMembers.length + 1,
   });
 
   const getEasternTodayAndWeekday = () => {
@@ -83,9 +100,20 @@ export default function ManageTasksClient({
     );
   };
 
+  const updateLocalTeamMember = (
+    id: string,
+    field: keyof TeamMember,
+    value: string | number | boolean | null
+  ) => {
+    setTeamMembers((prev) =>
+      prev.map((member) =>
+        member.id === id ? { ...member, [field]: value } : member
+      )
+    );
+  };
+
   const saveTask = async (task: TaskTemplate) => {
     const { today } = getEasternTodayAndWeekday();
-
     const oldTaskName = originalNames[task.id] || task.task_name;
     const newTaskType = task.task_section === "Weekly" ? "weekly" : "daily";
 
@@ -126,7 +154,7 @@ export default function ManageTasksClient({
       [task.id]: task.task_name,
     }));
 
-    setMessage(`Saved: ${task.task_name}`);
+    setMessage(`Saved task: ${task.task_name}`);
   };
 
   const deleteTask = async (id: number) => {
@@ -143,7 +171,7 @@ export default function ManageTasksClient({
     }
 
     setTasks((prev) => prev.filter((t) => t.id !== id));
-    setMessage(`Deleted: ${task?.task_name}`);
+    setMessage(`Deleted task: ${task?.task_name || ""}`);
   };
 
   const addTask = async () => {
@@ -160,7 +188,7 @@ export default function ManageTasksClient({
     const { data, error } = await supabase
       .from("task_templates")
       .insert({
-        task_name: newTask.task_name,
+        task_name: newTask.task_name.trim(),
         task_type: newTask.task_section === "Weekly" ? "weekly" : "daily",
         task_section: newTask.task_section,
         active: true,
@@ -181,6 +209,11 @@ export default function ManageTasksClient({
       )
     );
 
+    setOriginalNames((prev) => ({
+      ...prev,
+      [(data as TaskTemplate).id]: (data as TaskTemplate).task_name,
+    }));
+
     setNewTask({
       task_name: "",
       task_section: "Daily",
@@ -188,7 +221,106 @@ export default function ManageTasksClient({
       weekday: "",
     });
 
-    setMessage(`Added: ${data.task_name}`);
+    setMessage(`Added task: ${(data as TaskTemplate).task_name}`);
+  };
+
+  const saveTeamMember = async (member: TeamMember) => {
+    const cleanedInitials = member.initials.toUpperCase().trim();
+
+    if (!cleanedInitials) {
+      setMessage("Team member initials cannot be blank.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("team_members")
+      .update({
+        initials: cleanedInitials,
+        name: member.name?.trim() || null,
+        active: member.active,
+        sort_order: member.sort_order,
+      })
+      .eq("id", member.id);
+
+    if (error) {
+      setMessage(`Error saving ${cleanedInitials}`);
+      return;
+    }
+
+    setTeamMembers((prev) =>
+      prev
+        .map((m) =>
+          m.id === member.id
+            ? {
+                ...m,
+                initials: cleanedInitials,
+                name: member.name?.trim() || null,
+              }
+            : m
+        )
+        .sort((a, b) => a.sort_order - b.sort_order)
+    );
+
+    setMessage(`Saved team member: ${cleanedInitials}`);
+  };
+
+  const addTeamMember = async () => {
+    if (teamMembers.length >= 8) {
+      setMessage("You can have up to 8 team members.");
+      return;
+    }
+
+    const cleanedInitials = newTeamMember.initials.toUpperCase().trim();
+
+    if (!cleanedInitials) {
+      setMessage("Enter initials.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("team_members")
+      .insert({
+        initials: cleanedInitials,
+        name: newTeamMember.name.trim() || null,
+        active: true,
+        sort_order: Number(newTeamMember.sort_order),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setMessage("Error adding team member");
+      return;
+    }
+
+    setTeamMembers((prev) =>
+      [...prev, data as TeamMember].sort((a, b) => a.sort_order - b.sort_order)
+    );
+
+    setNewTeamMember({
+      initials: "",
+      name: "",
+      sort_order: teamMembers.length + 2,
+    });
+
+    setMessage(`Added team member: ${cleanedInitials}`);
+  };
+
+  const deleteTeamMember = async (id: string) => {
+    const member = teamMembers.find((m) => m.id === id);
+
+    const { error } = await supabase
+      .from("team_members")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setMessage("Error deleting team member");
+      return;
+    }
+
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+    setMessage(`Deleted team member: ${member?.initials || ""}`);
   };
 
   const regenerateTodayChecklist = async () => {
@@ -283,7 +415,7 @@ export default function ManageTasksClient({
           <div>
             <h1 className="text-3xl font-bold text-slate-50">Edit Tasks</h1>
             <p className="mt-1 text-slate-300">
-              Edit and organize checklist tasks
+              Edit tasks and team members
             </p>
           </div>
           {navButtons}
@@ -298,6 +430,155 @@ export default function ManageTasksClient({
             {message}
           </div>
         )}
+
+       <section className="mb-6 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:p-5">
+  <div className="mb-4 flex items-center justify-between">
+    <h2 className="text-xl font-semibold text-slate-50 sm:text-2xl">
+      Team Members
+    </h2>
+    <div className="text-sm text-slate-400">
+      {teamMembers.length} / 8
+    </div>
+  </div>
+
+  <div className="mb-5 grid gap-4 md:grid-cols-4">
+    <input
+      type="text"
+      placeholder="Initials"
+      value={newTeamMember.initials}
+      maxLength={5}
+      onChange={(e) =>
+        setNewTeamMember((prev) => ({
+          ...prev,
+          initials: e.target.value.toUpperCase(),
+        }))
+      }
+      className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 placeholder:text-slate-400"
+    />
+
+    <input
+      type="text"
+      placeholder="Name"
+      value={newTeamMember.name}
+      onChange={(e) =>
+        setNewTeamMember((prev) => ({
+          ...prev,
+          name: e.target.value,
+        }))
+      }
+      className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 placeholder:text-slate-400"
+    />
+
+    <input
+      type="number"
+      placeholder="Sort order"
+      value={newTeamMember.sort_order}
+      onChange={(e) =>
+        setNewTeamMember((prev) => ({
+          ...prev,
+          sort_order: Number(e.target.value),
+        }))
+      }
+      className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+    />
+
+    <button
+      onClick={addTeamMember}
+      disabled={teamMembers.length >= 8}
+      className={`rounded-xl border px-4 py-2 font-medium shadow-sm ${
+        teamMembers.length >= 8
+          ? "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500"
+          : "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
+      }`}
+    >
+      Add Team Member
+    </button>
+  </div>
+
+  <div className="space-y-4">
+    {teamMembers.length === 0 ? (
+      <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 text-slate-300">
+        No team members yet.
+      </div>
+    ) : (
+      teamMembers.map((member) => (
+        <div
+          key={member.id}
+          className="rounded-2xl border border-slate-700 bg-slate-800 p-4"
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              type="text"
+              value={member.initials}
+              maxLength={5}
+              onChange={(e) =>
+                updateLocalTeamMember(
+                  member.id,
+                  "initials",
+                  e.target.value.toUpperCase()
+                )
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            />
+
+            <input
+              type="text"
+              value={member.name || ""}
+              onChange={(e) =>
+                updateLocalTeamMember(member.id, "name", e.target.value)
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            />
+
+            <input
+              type="number"
+              value={member.sort_order}
+              onChange={(e) =>
+                updateLocalTeamMember(
+                  member.id,
+                  "sort_order",
+                  Number(e.target.value)
+                )
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
+            />
+
+            <label className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100">
+              <input
+                type="checkbox"
+                checked={member.active}
+                onChange={(e) =>
+                  updateLocalTeamMember(
+                    member.id,
+                    "active",
+                    e.target.checked
+                  )
+                }
+              />
+              Active
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={() => saveTeamMember(member)}
+              className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 font-medium text-slate-100 shadow-sm hover:bg-slate-700"
+            >
+              Save
+            </button>
+
+            <button
+              onClick={() => deleteTeamMember(member.id)}
+              className="rounded-xl border border-red-700 bg-red-950/40 px-4 py-2 font-medium text-red-300 shadow-sm hover:bg-red-900/50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</section>
 
         <section className="mb-6 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-xl font-semibold text-slate-50 sm:text-2xl">
