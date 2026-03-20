@@ -623,11 +623,68 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
         .confetti-5 {
           background: #f472b6;
         }
+                  @keyframes background-breathe {
+          0% {
+            transform: scale(1) translate3d(0, 0, 0);
+            opacity: 0.9;
+          }
+          50% {
+            transform: scale(1.04) translate3d(0, -6px, 0);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1) translate3d(0, 0, 0);
+            opacity: 0.9;
+          }
+        }
+
+        @keyframes orb-drift-left {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(-12px, 10px, 0) scale(1.05);
+          }
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        @keyframes orb-drift-right {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          50% {
+            transform: translate3d(12px, -10px, 0) scale(1.05);
+          }
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
+
+        .background-breathe {
+          animation: background-breathe 18s ease-in-out infinite;
+          transform-origin: center;
+          will-change: transform, opacity;
+        }
+
+        .orb-drift-left {
+          animation: orb-drift-left 22s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        .orb-drift-right {
+          animation: orb-drift-right 26s ease-in-out infinite;
+          will-change: transform;
+        }
       `}</style>
 
-     <div className="absolute inset-0 z-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.15),transparent_40%)]" />
-  <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
+     <div className="absolute inset-0 z-0 overflow-hidden">
+  <div className="background-breathe absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900" />
+
+  <div className="orb-drift-left absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_40%)]" />
+
+  <div className="orb-drift-right absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
 </div>
 
       <div className="relative z-10">
