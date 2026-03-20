@@ -496,6 +496,24 @@ export default function ChecklistClient({
     return "border-white/10";
   };
 
+  const getTabGlow = (section: string, isOpen: boolean) => {
+  if (!isOpen) return "shadow-black/20";
+
+  if (section === "Daily") return "shadow-blue-500/25";
+  if (section === "Nightly Closing") return "shadow-amber-400/25";
+  if (section === "Weekly") return "shadow-green-500/25";
+  return "shadow-white/20";
+};
+
+const getTabOpenBackground = (section: string, isOpen: boolean) => {
+  if (!isOpen) return "bg-white/8";
+
+  if (section === "Daily") return "bg-blue-500/15";
+  if (section === "Nightly Closing") return "bg-amber-400/15";
+  if (section === "Weekly") return "bg-green-500/15";
+  return "bg-white/12";
+};
+
   const getCompletedTextColor = (section: string | null) => {
     if (section === "Daily") return "text-blue-200";
     if (section === "Nightly Closing") return "text-amber-200";
@@ -715,12 +733,15 @@ export default function ChecklistClient({
                 )} ${getSectionGlow(section)}`}
               >
                 <button
-                  type="button"
-                  onClick={() => toggleSection(section)}
-                  className={`mb-4 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/8 px-4 py-4 text-left text-2xl font-semibold shadow-lg shadow-black/20 backdrop-blur-xl transition hover:bg-white/12 ${getHeaderColor(
-                    section
-                  )}`}
-                >
+  type="button"
+  onClick={() => toggleSection(section)}
+  className={`mb-4 flex w-full items-center justify-between rounded-[22px] border px-4 py-4 text-left text-2xl font-semibold shadow-xl backdrop-blur-xl transition duration-200 hover:-translate-y-[1px] ${getHeaderColor(
+    section
+  )} ${getSectionBorder(section)} ${getTabOpenBackground(
+    section,
+    openSections[section]
+  )} ${getTabGlow(section, openSections[section])}`}
+>
                   <span>
                     {openSections[section] ? "▼" : "▶"}{" "}
                     {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
