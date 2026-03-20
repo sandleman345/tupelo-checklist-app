@@ -26,6 +26,12 @@ export default async function ManagerPage(props: {
     .eq("checklist_date", selectedDate)
     .order("id", { ascending: true });
 
+  const { data: teamMembers } = await supabase
+    .from("team_members")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+
   const navButtons = (
     <div className="flex flex-wrap gap-2">
       <a
@@ -76,8 +82,21 @@ export default async function ManagerPage(props: {
   const total = safeItems.length;
   const completed = safeItems.filter((i) => i.completed).length;
   const incomplete = total - completed;
+
   const missedTasks = safeItems.filter((i) => !i.completed);
   const completedTasks = safeItems.filter((i) => i.completed);
+
+  const uniqueInitials = Array.from(
+    new Set(
+      safeItems
+        .filter((item) => item.completed && item.employee_initials)
+        .map((item) => item.employee_initials as string)
+    )
+  );
+
+  const activeTeam =
+    teamMembers?.filter((member) => uniqueInitials.includes(member.initials)) ||
+    [];
 
   const sections = ["Daily", "Nightly Closing", "Weekly"];
 
@@ -134,7 +153,9 @@ export default async function ManagerPage(props: {
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
             <div className="text-sm font-medium text-slate-300">Total Tasks</div>
-            <div className="mt-0.5 text-2xl font-bold text-slate-50">{total}</div>
+            <div className="mt-0.5 text-2xl font-bold text-slate-50">
+              {total}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
@@ -156,6 +177,32 @@ export default async function ManagerPage(props: {
               Jump to missed tasks
             </div>
           </a>
+        </div>
+
+        <div className="mb-6 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
+          <h2 className="mb-2 text-lg font-semibold text-slate-100">
+            Today’s Team
+          </h2>
+
+          {activeTeam.length === 0 ? (
+            <div className="text-sm text-slate-400">No activity recorded</div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {activeTeam.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-2 rounded-full border border-slate-600 bg-slate-800 px-4 py-2"
+                >
+                  <div className="text-sm font-bold text-slate-100">
+                    {member.initials}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    {member.name || ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-6 grid gap-4">
@@ -289,7 +336,8 @@ export default async function ManagerPage(props: {
 
                   {item.completed_at && (
                     <div className="mt-1 text-sm text-slate-400">
-                      Completed at: {new Date(item.completed_at).toLocaleString()}
+                      Completed at:{" "}
+                      {new Date(item.completed_at).toLocaleString()}
                     </div>
                   )}
                 </div>
