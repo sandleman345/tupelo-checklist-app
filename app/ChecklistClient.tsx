@@ -526,12 +526,15 @@ export default function ChecklistClient({
   const getWeekday = () => weekdayName;
 
   return (
-    <main className="relative min-h-screen text-slate-100">
-  {/* Background Image */}
-  <div
-    className="fixed inset-0 z-0 bg-cover bg-center opacity-20"
-    style={{ backgroundImage: "url('/background.jpg')" }}
-  />
+    <main className="relative min-h-screen text-slate-100 overflow-hidden">
+  {/* Background */}
+  <div className="absolute inset-0 z-0">
+    <div
+      className="absolute inset-0 bg-cover bg-center opacity-40"
+      style={{ backgroundImage: "url('/background.jpg')" }}
+    />
+    <div className="absolute inset-0 bg-slate-950/30" />
+  </div>
 
   {/* Content */}
   <div className="relative z-10">
