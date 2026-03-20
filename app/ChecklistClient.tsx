@@ -50,7 +50,7 @@ export default function ChecklistClient({
   const [celebrationTheme, setCelebrationTheme] = useState<CelebrationTheme>({
     border: "border-green-400",
     text: "text-green-300",
-    bg: "bg-slate-900",
+    bg: "bg-slate-900/95",
   });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -72,7 +72,7 @@ export default function ChecklistClient({
     timeZone: "America/New_York",
   });
 
-    const weekdayName = now.toLocaleDateString("en-US", {
+  const weekdayName = now.toLocaleDateString("en-US", {
     timeZone: "America/New_York",
     weekday: "long",
   });
@@ -85,7 +85,6 @@ export default function ChecklistClient({
     })
   );
 
-  // 🌿 Subtle daily accent system
   const accentStyles = [
     { symbol: "🍃", color: "text-green-300" },
     { symbol: "✦", color: "text-amber-300" },
@@ -267,11 +266,11 @@ export default function ChecklistClient({
   ];
 
   const celebrationThemes: CelebrationTheme[] = [
-    { border: "border-green-400", text: "text-green-300", bg: "bg-slate-900" },
-    { border: "border-blue-400", text: "text-blue-300", bg: "bg-slate-900" },
-    { border: "border-amber-400", text: "text-amber-300", bg: "bg-slate-900" },
-    { border: "border-purple-400", text: "text-purple-300", bg: "bg-slate-900" },
-    { border: "border-pink-400", text: "text-pink-300", bg: "bg-slate-900" },
+    { border: "border-green-400", text: "text-green-300", bg: "bg-slate-900/95" },
+    { border: "border-blue-400", text: "text-blue-300", bg: "bg-slate-900/95" },
+    { border: "border-amber-400", text: "text-amber-300", bg: "bg-slate-900/95" },
+    { border: "border-purple-400", text: "text-purple-300", bg: "bg-slate-900/95" },
+    { border: "border-pink-400", text: "text-pink-300", bg: "bg-slate-900/95" },
   ];
 
   const playCelebrationSound = () => {
@@ -477,23 +476,30 @@ export default function ChecklistClient({
   };
 
   const getHeaderColor = (section: string) => {
-    if (section === "Daily") return "text-blue-300";
-    if (section === "Nightly Closing") return "text-amber-300";
-    if (section === "Weekly") return "text-green-300";
+    if (section === "Daily") return "text-blue-200";
+    if (section === "Nightly Closing") return "text-amber-200";
+    if (section === "Weekly") return "text-green-200";
     return "text-slate-100";
   };
 
-  const getSectionCardColor = (section: string) => {
-    if (section === "Daily") return "bg-slate-900 border-blue-900";
-    if (section === "Nightly Closing") return "bg-slate-900 border-amber-900";
-    if (section === "Weekly") return "bg-slate-900 border-green-900";
-    return "bg-slate-900 border-slate-700";
+  const getSectionGlow = (section: string) => {
+    if (section === "Daily") return "shadow-blue-950/40";
+    if (section === "Nightly Closing") return "shadow-amber-950/40";
+    if (section === "Weekly") return "shadow-green-950/40";
+    return "shadow-black/30";
+  };
+
+  const getSectionBorder = (section: string) => {
+    if (section === "Daily") return "border-blue-400/25";
+    if (section === "Nightly Closing") return "border-amber-300/25";
+    if (section === "Weekly") return "border-green-400/25";
+    return "border-white/10";
   };
 
   const getCompletedTextColor = (section: string | null) => {
-    if (section === "Daily") return "text-blue-300";
-    if (section === "Nightly Closing") return "text-amber-300";
-    if (section === "Weekly") return "text-green-300";
+    if (section === "Daily") return "text-blue-200";
+    if (section === "Nightly Closing") return "text-amber-200";
+    if (section === "Weekly") return "text-green-200";
     return "text-slate-100";
   };
 
@@ -501,24 +507,25 @@ export default function ChecklistClient({
     section: string | null,
     completed: boolean
   ) => {
-    if (!completed) return "border-slate-700 bg-slate-800";
-    if (section === "Daily") return "border-blue-700 bg-blue-950/60";
-    if (section === "Nightly Closing") {
-      return "border-amber-700 bg-amber-950/50";
+    if (!completed) {
+      return "border-white/10 bg-white/5";
     }
-    if (section === "Weekly") return "border-green-700 bg-green-950/50";
-    return "border-slate-700 bg-slate-700";
+
+    if (section === "Daily") return "border-blue-300/25 bg-blue-500/10";
+    if (section === "Nightly Closing") return "border-amber-300/25 bg-amber-400/10";
+    if (section === "Weekly") return "border-green-300/25 bg-green-500/10";
+    return "border-white/10 bg-white/5";
   };
 
   const getSelectedMemberButtonClasses = (section: string | null) => {
     if (section === "Daily") {
-      return "border-blue-400 bg-blue-500 text-white scale-105";
+      return "border-blue-300 bg-blue-500 text-white scale-105 shadow-lg shadow-blue-900/30";
     }
     if (section === "Nightly Closing") {
-      return "border-amber-300 bg-amber-400 text-slate-950 scale-105";
+      return "border-amber-200 bg-amber-400 text-slate-950 scale-105 shadow-lg shadow-amber-900/30";
     }
     if (section === "Weekly") {
-      return "border-green-400 bg-green-500 text-white scale-105";
+      return "border-green-300 bg-green-500 text-white scale-105 shadow-lg shadow-green-900/30";
     }
     return "border-slate-300 bg-slate-300 text-slate-950 scale-105";
   };
@@ -526,18 +533,7 @@ export default function ChecklistClient({
   const getWeekday = () => weekdayName;
 
   return (
-    <main className="relative min-h-screen text-slate-100 overflow-hidden">
-  {/* Background */}
-  <div className="absolute inset-0 z-0">
-    <div
-      className="absolute inset-0 bg-cover bg-center opacity-40"
-      style={{ backgroundImage: "url('/background.jpg')" }}
-    />
-    <div className="absolute inset-0 bg-slate-950/30" />
-  </div>
-
-  {/* Content */}
-  <div className="relative z-10">
+    <main className="relative min-h-screen overflow-hidden text-slate-100">
       <style jsx>{`
         @keyframes praise-pop {
           0% {
@@ -611,257 +607,268 @@ export default function ChecklistClient({
         }
       `}</style>
 
-      <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950 px-6 py-4">
-       
-       <div className="flex items-center gap-2">
-  <span className={`text-lg ${todayAccent.color}`}>
-    {todayAccent.symbol}
-  </span>
+      <div className="absolute inset-0 z-0">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: "url('/background.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-slate-950/70" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_30%),radial-gradient(circle_at_bottom,rgba(251,191,36,0.08),transparent_25%)]" />
+      </div>
 
-  <h1 className="text-3xl font-bold text-slate-50">
-    Tupelo Tea Checklist
-  </h1>
+      <div className="relative z-10">
+        <div className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/55 px-4 py-4 backdrop-blur-xl sm:px-6">
+          <div className="mx-auto max-w-5xl">
+            <div className="flex items-center gap-2">
+              <span className={`text-lg ${todayAccent.color}`}>
+                {todayAccent.symbol}
+              </span>
 
-  <span className={`text-lg ${todayAccent.color}`}>
-    {todayAccent.symbol}
-  </span>
-</div>
-        <p className="text-slate-300">
-          Tap your initials to complete a task
-        </p>
+              <h1 className="text-3xl font-bold text-slate-50 drop-shadow-sm">
+                Tupelo Tea Checklist
+              </h1>
 
-        <div className="mt-2 text-sm text-slate-300">
-          Checklist Date: {checklistDate}
+              <span className={`text-lg ${todayAccent.color}`}>
+                {todayAccent.symbol}
+              </span>
+            </div>
+
+            <p className="text-slate-300">
+              Tap your initials to complete a task
+            </p>
+
+            <div className="mt-2 text-sm text-slate-300">
+              Checklist Date: {checklistDate}
+            </div>
+
+            {isReadOnly && (
+              <div className="mt-3 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 backdrop-blur-md">
+                This checklist is from a previous day and is now read-only.
+              </div>
+            )}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                href="/manager"
+                className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/12"
+              >
+                History
+              </a>
+
+              <a
+                href="/manage-tasks"
+                className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/12"
+              >
+                Edit Tasks
+              </a>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+                <div className="text-sm font-medium text-slate-300">Total Tasks</div>
+                <div className="mt-0.5 text-2xl font-bold text-slate-50">
+                  {totalTasks}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+                <div className="text-sm font-medium text-slate-300">Completed</div>
+                <div className="mt-0.5 text-2xl font-bold text-green-300">
+                  {completedTasks}
+                </div>
+              </div>
+
+              <a
+                href="#checklist-sections"
+                className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl transition hover:bg-white/12"
+              >
+                <div className="text-sm font-medium text-slate-300">Incomplete</div>
+                <div className="mt-0.5 text-2xl font-bold text-red-300">
+                  {incompleteTasks}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  Jump to checklist
+                </div>
+              </a>
+            </div>
+          </div>
         </div>
 
-        {isReadOnly && (
-          <div className="mt-3 rounded-xl border border-amber-700 bg-amber-950/50 px-4 py-3 text-sm text-amber-200">
-            This checklist is from a previous day and is now read-only.
+        <div
+          id="checklist-sections"
+          className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-4"
+        >
+          {sections.map((section) => {
+            const sectionItems = items.filter(
+              (item) => item.task_section === section
+            );
+
+            if (sectionItems.length === 0) return null;
+
+            const stats = getSectionStats(section);
+
+            return (
+              <section
+                key={section}
+                className={`rounded-[28px] border bg-white/8 p-5 shadow-2xl backdrop-blur-2xl ${getSectionBorder(
+                  section
+                )} ${getSectionGlow(section)}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section)}
+                  className={`mb-4 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/8 px-4 py-4 text-left text-2xl font-semibold shadow-lg shadow-black/20 backdrop-blur-xl transition hover:bg-white/12 ${getHeaderColor(
+                    section
+                  )}`}
+                >
+                  <span>
+                    {openSections[section] ? "▼" : "▶"}{" "}
+                    {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
+                  </span>
+
+                  <span className="text-sm text-slate-300">
+                    {sectionItems.length} tasks
+                  </span>
+                </button>
+
+                <div className="mb-4">
+                  <div className="mb-1 flex justify-between text-sm font-medium text-slate-200">
+                    <span>Progress</span>
+                    <span>
+                      {stats.completed} / {stats.total}
+                    </span>
+                  </div>
+
+                  <div className="h-4 w-full rounded-full bg-slate-900/60">
+                    <div
+                      className={`h-4 rounded-full transition-all ${getBarColor(
+                        section
+                      )}`}
+                      style={{ width: `${stats.percent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {openSections[section] ? (
+                  <div className="space-y-4">
+                    {sectionItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
+                          item.task_section,
+                          item.completed
+                        )}`}
+                      >
+                        <div className="text-xl font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-4">
+                          <div
+                            className={`text-lg font-medium ${
+                              item.completed
+                                ? getCompletedTextColor(item.task_section)
+                                : "text-slate-100"
+                            }`}
+                          >
+                            {item.completed ? "Completed" : "Not completed"}
+                          </div>
+
+                          <div className="flex flex-wrap gap-3">
+                            {teamMembers.map((member) => {
+                              const isSelected =
+                                item.employee_initials === member.initials;
+
+                              return (
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  title={member.name || member.initials}
+                                  disabled={isReadOnly}
+                                  onClick={() =>
+                                    updateInitials(
+                                      item.id,
+                                      isSelected ? "" : member.initials
+                                    )
+                                  }
+                                  className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold tracking-wide transition-all ${
+                                    isSelected
+                                      ? getSelectedMemberButtonClasses(
+                                          item.task_section
+                                        )
+                                      : "border-white/10 bg-white/8 text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/12"
+                                  } ${isReadOnly ? "opacity-70" : ""}`}
+                                >
+                                  {member.initials}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {item.employee_initials && (
+                          <div className="mt-3 text-sm text-slate-300">
+                            Completed by: {item.employee_initials}
+                          </div>
+                        )}
+
+                        {item.completed_at && (
+                          <div className="mt-1 text-sm text-slate-300">
+                            Completed at:{" "}
+                            {new Date(item.completed_at).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
+        </div>
+
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 rounded-2xl border border-green-400/25 bg-slate-900/90 px-4 py-3 text-sm font-medium text-green-300 shadow-2xl shadow-black/30 backdrop-blur-xl">
+            {toastMessage}
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href="/manager"
-            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
-          >
-            History
-          </a>
+        {(bigPraiseMessage || confettiPieces.length > 0) && (
+          <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-black/30" />
 
-          <a
-            href="/manage-tasks"
-            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-slate-800"
-          >
-            Edit Tasks
-          </a>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
-            <div className="text-sm font-medium text-slate-300">Total Tasks</div>
-            <div className="mt-0.5 text-2xl font-bold text-slate-50">
-              {totalTasks}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
-            <div className="text-sm font-medium text-slate-300">Completed</div>
-            <div className="mt-0.5 text-2xl font-bold text-green-400">
-              {completedTasks}
-            </div>
-          </div>
-
-          <a
-            href="#checklist-sections"
-            className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm transition hover:bg-slate-800"
-          >
-            <div className="text-sm font-medium text-slate-300">Incomplete</div>
-            <div className="mt-0.5 text-2xl font-bold text-red-400">
-              {incompleteTasks}
-            </div>
-            <div className="mt-1 text-xs text-slate-400">
-              Jump to checklist
-            </div>
-          </a>
-        </div>
-      </div>
-
-      <div
-        id="checklist-sections"
-        className="mx-auto max-w-5xl space-y-8 px-4 py-6"
-      >
-        {sections.map((section) => {
-          const sectionItems = items.filter(
-            (item) => item.task_section === section
-          );
-
-          if (sectionItems.length === 0) return null;
-
-          const stats = getSectionStats(section);
-
-          return (
-            <section
-              key={section}
-              className={`rounded-2xl border p-5 shadow-sm ${getSectionCardColor(
-                section
-              )}`}
-            >
-              <button
-                type="button"
-                onClick={() => toggleSection(section)}
-                className={`mb-4 flex w-full items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-left text-2xl font-semibold ${getHeaderColor(
-                  section
-                )}`}
-              >
-                <span>
-                  {openSections[section] ? "▼" : "▶"}{" "}
-                  {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
-                </span>
-
-                <span className="text-sm text-slate-300">
-                  {sectionItems.length} tasks
-                </span>
-              </button>
-
-              <div className="mb-4">
-                <div className="mb-1 flex justify-between text-sm font-medium text-slate-200">
-                  <span>Progress</span>
-                  <span>
-                    {stats.completed} / {stats.total}
-                  </span>
-                </div>
-
-                <div className="h-4 w-full rounded-full bg-slate-800">
-                  <div
-                    className={`h-4 rounded-full transition-all ${getBarColor(
-                      section
-                    )}`}
-                    style={{ width: `${stats.percent}%` }}
-                  />
-                </div>
-              </div>
-
-              {openSections[section] ? (
-                <div className="space-y-4">
-                  {sectionItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`rounded-xl border p-4 ${getCompletedCardColor(
-                        item.task_section,
-                        item.completed
-                      )}`}
-                    >
-                      <div className="text-xl font-semibold text-slate-50">
-                        {item.task_name}
-                      </div>
-
-                      <div className="mt-4 flex flex-col gap-4">
-                        <div
-                          className={`text-lg font-medium ${
-                            item.completed
-                              ? getCompletedTextColor(item.task_section)
-                              : "text-slate-100"
-                          }`}
-                        >
-                          {item.completed ? "Completed" : "Not completed"}
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                          {teamMembers.map((member) => {
-                            const isSelected =
-                              item.employee_initials === member.initials;
-
-                            return (
-                              <button
-                                key={member.id}
-                                type="button"
-                                title={member.name || member.initials}
-                                disabled={isReadOnly}
-                                onClick={() =>
-                                  updateInitials(
-                                    item.id,
-                                    isSelected ? "" : member.initials
-                                  )
-                                }
-                                className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold tracking-wide transition-all ${
-                                  isSelected
-                                    ? getSelectedMemberButtonClasses(
-                                        item.task_section
-                                      )
-                                    : "border-slate-600 bg-slate-900 text-slate-200 hover:bg-slate-800"
-                                } ${isReadOnly ? "opacity-70" : ""}`}
-                              >
-                                {member.initials}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {item.employee_initials && (
-                        <div className="mt-3 text-sm text-slate-300">
-                          Completed by: {item.employee_initials}
-                        </div>
-                      )}
-
-                      {item.completed_at && (
-                        <div className="mt-1 text-sm text-slate-300">
-                          Completed at:{" "}
-                          {new Date(item.completed_at).toLocaleString()}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
-
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-green-700 bg-slate-900 px-4 py-3 text-sm font-medium text-green-300 shadow-lg">
-          {toastMessage}
-        </div>
-      )}
-
-      {(bigPraiseMessage || confettiPieces.length > 0) && (
-        <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-black/30" />
-
-          {confettiPieces.map((piece, index) => (
-            <div
-              key={piece.id}
-              className={`confetti-piece confetti-${index % 6}`}
-              style={{
-                left: `${piece.left}%`,
-                animationDelay: `${piece.delay}s`,
-                animationDuration: `${piece.duration}s`,
-                transform: `rotate(${piece.rotate}deg)`,
-              }}
-            />
-          ))}
-
-          {bigPraiseMessage && (
-            <div
-              className={`relative mx-6 max-w-2xl rounded-3xl border-2 px-8 py-8 text-center shadow-2xl ${
-                bigPraiseMessage.includes("ALL TASKS COMPLETE") ||
-                bigPraiseMessage.includes("Everything is complete") ||
-                bigPraiseMessage.includes("100% complete")
-                  ? `all-complete-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
-                  : `praise-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
-              }`}
-            >
+            {confettiPieces.map((piece, index) => (
               <div
-                className={`text-3xl font-bold sm:text-5xl ${celebrationTheme.text}`}
-              >
-                {bigPraiseMessage}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+                key={piece.id}
+                className={`confetti-piece confetti-${index % 6}`}
+                style={{
+                  left: `${piece.left}%`,
+                  animationDelay: `${piece.delay}s`,
+                  animationDuration: `${piece.duration}s`,
+                  transform: `rotate(${piece.rotate}deg)`,
+                }}
+              />
+            ))}
 
+            {bigPraiseMessage && (
+              <div
+                className={`relative mx-6 max-w-2xl rounded-3xl border-2 px-8 py-8 text-center shadow-2xl ${
+                  bigPraiseMessage.includes("ALL TASKS COMPLETE") ||
+                  bigPraiseMessage.includes("Everything is complete") ||
+                  bigPraiseMessage.includes("100% complete")
+                    ? `all-complete-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
+                    : `praise-pop ${celebrationTheme.border} ${celebrationTheme.bg}`
+                } backdrop-blur-xl`}
+              >
+                <div
+                  className={`text-3xl font-bold sm:text-5xl ${celebrationTheme.text}`}
+                >
+                  {bigPraiseMessage}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
