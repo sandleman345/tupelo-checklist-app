@@ -37,7 +37,9 @@ export default async function ManagerPage(props: {
   });
 
   const selectedDate = resolvedParams.date || today;
+  
   const isSevenDayMode = resolvedParams.mode === "7d";
+const isThisWeekMode = resolvedParams.mode === "week";
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -52,6 +54,12 @@ export default async function ManagerPage(props: {
   const sevenDaysAgoStr = sevenDaysAgo.toLocaleDateString("en-CA", {
     timeZone: "America/New_York",
   });
+  const startOfWeek = new Date();
+startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
+  timeZone: "America/New_York",
+});
 
   let checklistQuery = supabase
     .from("checklist_items")
@@ -60,12 +68,16 @@ export default async function ManagerPage(props: {
     .order("id", { ascending: true });
 
   if (isSevenDayMode) {
-    checklistQuery = checklistQuery
-      .gte("checklist_date", sevenDaysAgoStr)
-      .lte("checklist_date", today);
-  } else {
-    checklistQuery = checklistQuery.eq("checklist_date", selectedDate);
-  }
+  checklistQuery = checklistQuery
+    .gte("checklist_date", sevenDaysAgoStr)
+    .lte("checklist_date", today);
+} else if (isThisWeekMode) {
+  checklistQuery = checklistQuery
+    .gte("checklist_date", startOfWeekStr)
+    .lte("checklist_date", today);
+} else {
+  checklistQuery = checklistQuery.eq("checklist_date", selectedDate);
+}
 
   const { data: items, error } = await checklistQuery;
 
@@ -96,8 +108,10 @@ export default async function ManagerPage(props: {
   );
 
   const subtitle = isSevenDayMode
-    ? `Viewing last 7 days (${sevenDaysAgoStr} to ${today})`
-    : `Viewing checklist for ${selectedDate}`;
+  ? `Viewing last 7 days (${sevenDaysAgoStr} to ${today})`
+  : isThisWeekMode
+  ? `Viewing this week (${startOfWeekStr} to ${today})`
+  : `Viewing checklist for ${selectedDate}`;
 
   if (error) {
     return (
@@ -246,40 +260,54 @@ export default async function ManagerPage(props: {
 
         <HistoryDateForm selectedDate={selectedDate} today={today} />
 
-        <div className="mb-4 flex flex-wrap gap-2">
-          <a
-            href={`/manager?date=${today}`}
-            className={`rounded-xl border px-3 py-2 text-sm ${
-              !isSevenDayMode && selectedDate === today
-                ? "border-blue-500 bg-blue-950/40 text-blue-200"
-                : "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
-            }`}
-          >
-            Today
-          </a>
+        <div className="mb-6 inline-flex rounded-2xl border border-slate-700 bg-slate-900 p-1 shadow-sm">
+  {/* Today */}
+  <a
+    href={`/manager?date=${today}`}
+    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+      !isSevenDayMode && selectedDate === today
+        ? "bg-blue-500 text-white shadow"
+        : "text-slate-300 hover:bg-slate-800"
+    }`}
+  >
+    Today
+  </a>
 
-          <a
-            href={`/manager?date=${yesterdayStr}`}
-            className={`rounded-xl border px-3 py-2 text-sm ${
-              !isSevenDayMode && selectedDate === yesterdayStr
-                ? "border-blue-500 bg-blue-950/40 text-blue-200"
-                : "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
-            }`}
-          >
-            Yesterday
-          </a>
+  {/* Yesterday */}
+  <a
+    href={`/manager?date=${yesterdayStr}`}
+    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+      !isSevenDayMode && selectedDate === yesterdayStr
+        ? "bg-blue-500 text-white shadow"
+        : "text-slate-300 hover:bg-slate-800"
+    }`}
+  >
+    Yesterday
+  </a>
+  <a
+  href="/manager?mode=week"
+  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+    isThisWeekMode
+      ? "bg-blue-500 text-white shadow"
+      : "text-slate-300 hover:bg-slate-800"
+  }`}
+>
+  This Week
+</a>
 
-          <a
-            href="/manager?mode=7d"
-            className={`rounded-xl border px-3 py-2 text-sm ${
-              isSevenDayMode
-                ? "border-blue-500 bg-blue-950/40 text-blue-200"
-                : "border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800"
-            }`}
-          >
-            Last 7 Days
-          </a>
-        </div>
+  {/* 7 Day */}
+  <a
+    href="/manager?mode=7d"
+    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+      isSevenDayMode
+        ? "bg-blue-500 text-white shadow"
+        : "text-slate-300 hover:bg-slate-800"
+    }`}
+    
+  >
+    7 Days
+  </a>
+</div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
@@ -442,8 +470,10 @@ export default async function ManagerPage(props: {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-              ? `Tasks not completed from ${sevenDaysAgoStr} to ${today}`
-              : `Tasks not completed for ${selectedDate}`}
+  ? `Tasks not completed from ${sevenDaysAgoStr} to ${today}`
+  : isThisWeekMode
+  ? `Tasks not completed from ${startOfWeekStr} to ${today}`
+  : `Tasks not completed for ${selectedDate}`}
           </p>
 
           {missedTasks.length === 0 ? (
@@ -490,8 +520,10 @@ export default async function ManagerPage(props: {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-              ? `Tasks completed from ${sevenDaysAgoStr} to ${today}`
-              : `Tasks completed for ${selectedDate}`}
+  ? `Tasks completed from ${sevenDaysAgoStr} to ${today}`
+  : isThisWeekMode
+  ? `Tasks completed from ${startOfWeekStr} to ${today}`
+  : `Tasks completed for ${selectedDate}`}
           </p>
 
           {completedTasks.length === 0 ? (
@@ -539,7 +571,7 @@ export default async function ManagerPage(props: {
           )}
         </details>
 
-        {isSevenDayMode && sortedDates.length > 0 && (
+        {(isSevenDayMode || isThisWeekMode) && sortedDates.length > 0 && (
           <details className="rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-sm">
             <summary className="cursor-pointer list-none text-2xl font-bold text-slate-100">
               <div className="flex items-center justify-between">
