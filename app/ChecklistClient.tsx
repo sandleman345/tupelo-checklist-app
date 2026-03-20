@@ -625,14 +625,10 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
         }
       `}</style>
 
-      <div className="absolute inset-0 z-0">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: "url('/background.jpg')" }}
-        />
-        <div className="absolute inset-0 bg-slate-950/70" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_30%),radial-gradient(circle_at_bottom,rgba(251,191,36,0.08),transparent_25%)]" />
-      </div>
+     <div className="absolute inset-0 z-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.15),transparent_40%)]" />
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
+</div>
 
       <div className="relative z-10">
         <div className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/55 px-4 py-4 backdrop-blur-xl sm:px-6">
@@ -742,10 +738,21 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
     openSections[section]
   )} ${getTabGlow(section, openSections[section])}`}
 >
-                  <span>
-                    {openSections[section] ? "▼" : "▶"}{" "}
-                    {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
-                  </span>
+                  <span className="flex items-center gap-3">
+  <span
+    className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm ${
+      openSections[section]
+        ? "border-white/20 bg-white/10"
+        : "border-white/10 bg-black/10"
+    }`}
+  >
+    {openSections[section] ? "▼" : "▶"}
+  </span>
+
+  <span>
+    {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
+  </span>
+</span>
 
                   <span className="text-sm text-slate-300">
                     {sectionItems.length} tasks
