@@ -526,7 +526,15 @@ export default function ChecklistClient({
   const getWeekday = () => weekdayName;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="relative min-h-screen text-slate-100">
+  {/* Background Image */}
+  <div
+    className="fixed inset-0 z-0 bg-cover bg-center opacity-20"
+    style={{ backgroundImage: "url('/background.jpg')" }}
+  />
+
+  {/* Content */}
+  <div className="relative z-10">
       <style jsx>{`
         @keyframes praise-pop {
           0% {
@@ -850,6 +858,8 @@ export default function ChecklistClient({
           )}
         </div>
       )}
+
+      </div>
     </main>
   );
 }
