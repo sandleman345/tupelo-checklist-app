@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type ChecklistItem = {
@@ -35,14 +35,18 @@ type CelebrationTheme = {
   bg: string;
 };
 
+type ChecklistClientProps = {
+  initialItems: ChecklistItem[];
+  teamMembers: TeamMember[];
+};
+
+const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
+
 export default function ChecklistClient({
   initialItems,
   teamMembers,
-}: {
-  initialItems: ChecklistItem[];
-  teamMembers: TeamMember[];
-}) {
-  const [items, setItems] = useState(initialItems);
+}: ChecklistClientProps) {
+  const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [toastMessage, setToastMessage] = useState("");
   const [bigPraiseMessage, setBigPraiseMessage] = useState("");
   const [completionEntryCount, setCompletionEntryCount] = useState(0);
@@ -58,6 +62,12 @@ export default function ChecklistClient({
     "Nightly Closing": false,
     Weekly: false,
   });
+
+  const visibleTeamMembers = useMemo(() => {
+    return [...teamMembers]
+      .filter((member) => member.active)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [teamMembers]);
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
@@ -277,9 +287,8 @@ export default function ChecklistClient({
     try {
       const AudioContextClass =
         window.AudioContext ||
-        (window as typeof window & {
-          webkitAudioContext?: typeof AudioContext;
-        }).webkitAudioContext;
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
 
       if (!AudioContextClass) return;
 
@@ -310,7 +319,7 @@ export default function ChecklistClient({
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.3);
     } catch {
-      // ignore
+      // ignore audio issues
     }
   };
 
@@ -382,9 +391,7 @@ export default function ChecklistClient({
     const randomTheme =
       celebrationThemes[Math.floor(Math.random() * celebrationThemes.length)];
     const randomMessage =
-      completionMessages[
-        Math.floor(Math.random() * completionMessages.length)
-      ];
+      completionMessages[Math.floor(Math.random() * completionMessages.length)];
 
     setCelebrationTheme(randomTheme);
     setBigPraiseMessage(randomMessage);
@@ -400,6 +407,7 @@ export default function ChecklistClient({
     if (isReadOnly) return;
 
     const previousItem = items.find((item) => item.id === id);
+    if (!previousItem) return;
 
     const cleanedInitials = initialsValue.toUpperCase().trim();
     const isCompleted = cleanedInitials.length > 0;
@@ -418,11 +426,9 @@ export default function ChecklistClient({
 
     setItems(updatedItems);
 
-    const becameCompleted =
-      previousItem && !previousItem.completed && isCompleted;
+    const becameCompleted = !previousItem.completed && isCompleted;
 
     if (
-      previousItem &&
       previousItem.task_section === "Weekly" &&
       !previousItem.completed &&
       isCompleted
@@ -447,7 +453,7 @@ export default function ChecklistClient({
       }
     }
 
-    await supabase
+    const { error } = await supabase
       .from("checklist_items")
       .update({
         employee_initials: cleanedInitials || null,
@@ -455,9 +461,12 @@ export default function ChecklistClient({
         completed_at: completedAt,
       })
       .eq("id", id);
-  };
 
-  const sections = ["Daily", "Nightly Closing", "Weekly"];
+    if (error) {
+      setItems(items);
+      console.error("Failed to update checklist item:", error);
+    }
+  };
 
   const getSectionStats = (section: string) => {
     const sectionItems = items.filter((item) => item.task_section === section);
@@ -497,22 +506,20 @@ export default function ChecklistClient({
   };
 
   const getTabGlow = (section: string, isOpen: boolean) => {
-  if (!isOpen) return "shadow-black/20";
+    if (!isOpen) return "shadow-black/20";
+    if (section === "Daily") return "shadow-blue-500/25";
+    if (section === "Nightly Closing") return "shadow-amber-400/25";
+    if (section === "Weekly") return "shadow-green-500/25";
+    return "shadow-white/20";
+  };
 
-  if (section === "Daily") return "shadow-blue-500/25";
-  if (section === "Nightly Closing") return "shadow-amber-400/25";
-  if (section === "Weekly") return "shadow-green-500/25";
-  return "shadow-white/20";
-};
-
-const getTabOpenBackground = (section: string, isOpen: boolean) => {
-  if (!isOpen) return "bg-white/8";
-
-  if (section === "Daily") return "bg-blue-500/15";
-  if (section === "Nightly Closing") return "bg-amber-400/15";
-  if (section === "Weekly") return "bg-green-500/15";
-  return "bg-white/12";
-};
+  const getTabOpenBackground = (section: string, isOpen: boolean) => {
+    if (!isOpen) return "bg-white/10";
+    if (section === "Daily") return "bg-blue-500/15";
+    if (section === "Nightly Closing") return "bg-amber-400/15";
+    if (section === "Weekly") return "bg-green-500/15";
+    return "bg-white/15";
+  };
 
   const getCompletedTextColor = (section: string | null) => {
     if (section === "Daily") return "text-blue-200";
@@ -586,44 +593,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
           }
         }
 
-        .praise-pop {
-          animation: praise-pop 2.2s ease-out forwards;
-        }
-
-        .all-complete-pop {
-          animation: praise-pop 2.8s ease-out forwards;
-        }
-
-        .confetti-piece {
-          position: absolute;
-          top: -10px;
-          width: 10px;
-          height: 18px;
-          border-radius: 3px;
-          animation-name: confetti-fall;
-          animation-timing-function: ease-out;
-          animation-fill-mode: forwards;
-        }
-
-        .confetti-0 {
-          background: #60a5fa;
-        }
-        .confetti-1 {
-          background: #4ade80;
-        }
-        .confetti-2 {
-          background: #fbbf24;
-        }
-        .confetti-3 {
-          background: #f87171;
-        }
-        .confetti-4 {
-          background: #a78bfa;
-        }
-        .confetti-5 {
-          background: #f472b6;
-        }
-                  @keyframes background-breathe {
+        @keyframes background-breathe {
           0% {
             transform: scale(1) translate3d(0, 0, 0);
             opacity: 0.9;
@@ -662,6 +632,44 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
           }
         }
 
+        .praise-pop {
+          animation: praise-pop 2.2s ease-out forwards;
+        }
+
+        .all-complete-pop {
+          animation: praise-pop 2.8s ease-out forwards;
+        }
+
+        .confetti-piece {
+          position: absolute;
+          top: -10px;
+          width: 10px;
+          height: 18px;
+          border-radius: 3px;
+          animation-name: confetti-fall;
+          animation-timing-function: ease-out;
+          animation-fill-mode: forwards;
+        }
+
+        .confetti-0 {
+          background: #60a5fa;
+        }
+        .confetti-1 {
+          background: #4ade80;
+        }
+        .confetti-2 {
+          background: #fbbf24;
+        }
+        .confetti-3 {
+          background: #f87171;
+        }
+        .confetti-4 {
+          background: #a78bfa;
+        }
+        .confetti-5 {
+          background: #f472b6;
+        }
+
         .background-breathe {
           animation: background-breathe 18s ease-in-out infinite;
           transform-origin: center;
@@ -679,13 +687,11 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
         }
       `}</style>
 
-     <div className="absolute inset-0 z-0 overflow-hidden">
-  <div className="background-breathe absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900" />
-
-  <div className="orb-drift-left absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_40%)]" />
-
-  <div className="orb-drift-right absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
-</div>
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="background-breathe absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900" />
+        <div className="orb-drift-left absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_40%)]" />
+        <div className="orb-drift-right absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_40%)]" />
+      </div>
 
       <div className="relative z-10">
         <div className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/55 px-4 py-4 backdrop-blur-xl sm:px-6">
@@ -721,28 +727,28 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
             <div className="mt-3 flex flex-wrap gap-2">
               <a
                 href="/manager"
-                className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/12"
+                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/15"
               >
                 History
               </a>
 
               <a
                 href="/manage-tasks"
-                className="rounded-2xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/12"
+                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-white/15"
               >
                 Edit Tasks
               </a>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+              <div className="rounded-3xl border border-white/10 bg-white/10 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
                 <div className="text-sm font-medium text-slate-300">Total Tasks</div>
                 <div className="mt-0.5 text-2xl font-bold text-slate-50">
                   {totalTasks}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+              <div className="rounded-3xl border border-white/10 bg-white/10 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
                 <div className="text-sm font-medium text-slate-300">Completed</div>
                 <div className="mt-0.5 text-2xl font-bold text-green-300">
                   {completedTasks}
@@ -751,7 +757,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
 
               <a
                 href="#checklist-sections"
-                className="rounded-3xl border border-white/10 bg-white/8 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl transition hover:bg-white/12"
+                className="rounded-3xl border border-white/10 bg-white/10 px-4 py-2 text-center shadow-xl shadow-black/20 backdrop-blur-xl transition hover:bg-white/15"
               >
                 <div className="text-sm font-medium text-slate-300">Incomplete</div>
                 <div className="mt-0.5 text-2xl font-bold text-red-300">
@@ -767,9 +773,9 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
 
         <div
           id="checklist-sections"
-          className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-4"
+          className="mx-auto max-w-5xl space-y-8 px-4 py-6"
         >
-          {sections.map((section) => {
+          {SECTION_ORDER.map((section) => {
             const sectionItems = items.filter(
               (item) => item.task_section === section
             );
@@ -781,35 +787,35 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
             return (
               <section
                 key={section}
-                className={`rounded-[28px] border bg-white/8 p-5 shadow-2xl backdrop-blur-2xl ${getSectionBorder(
+                className={`rounded-[28px] border bg-white/10 p-5 shadow-2xl backdrop-blur-2xl ${getSectionBorder(
                   section
                 )} ${getSectionGlow(section)}`}
               >
                 <button
-  type="button"
-  onClick={() => toggleSection(section)}
-  className={`mb-4 flex w-full items-center justify-between rounded-[22px] border px-4 py-4 text-left text-2xl font-semibold shadow-xl backdrop-blur-xl transition duration-200 hover:-translate-y-[1px] ${getHeaderColor(
-    section
-  )} ${getSectionBorder(section)} ${getTabOpenBackground(
-    section,
-    openSections[section]
-  )} ${getTabGlow(section, openSections[section])}`}
->
+                  type="button"
+                  onClick={() => toggleSection(section)}
+                  className={`mb-4 flex w-full items-center justify-between rounded-[22px] border px-4 py-4 text-left text-2xl font-semibold shadow-xl backdrop-blur-xl transition duration-200 hover:-translate-y-[1px] ${getHeaderColor(
+                    section
+                  )} ${getSectionBorder(section)} ${getTabOpenBackground(
+                    section,
+                    openSections[section]
+                  )} ${getTabGlow(section, openSections[section])}`}
+                >
                   <span className="flex items-center gap-3">
-  <span
-    className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm ${
-      openSections[section]
-        ? "border-white/20 bg-white/10"
-        : "border-white/10 bg-black/10"
-    }`}
-  >
-    {openSections[section] ? "▼" : "▶"}
-  </span>
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm ${
+                        openSections[section]
+                          ? "border-white/20 bg-white/10"
+                          : "border-white/10 bg-black/10"
+                      }`}
+                    >
+                      {openSections[section] ? "▼" : "▶"}
+                    </span>
 
-  <span>
-    {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
-  </span>
-</span>
+                    <span>
+                      {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
+                    </span>
+                  </span>
 
                   <span className="text-sm text-slate-300">
                     {sectionItems.length} tasks
@@ -834,7 +840,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
                   </div>
                 </div>
 
-                {openSections[section] ? (
+                {openSections[section] && (
                   <div className="space-y-4">
                     {sectionItems.map((item) => (
                       <div
@@ -860,7 +866,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
                           </div>
 
                           <div className="flex flex-wrap gap-3">
-                            {teamMembers.map((member) => {
+                            {visibleTeamMembers.map((member) => {
                               const isSelected =
                                 item.employee_initials === member.initials;
 
@@ -881,7 +887,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
                                       ? getSelectedMemberButtonClasses(
                                           item.task_section
                                         )
-                                      : "border-white/10 bg-white/8 text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/12"
+                                      : "border-white/10 bg-white/10 text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/15"
                                   } ${isReadOnly ? "opacity-70" : ""}`}
                                 >
                                   {member.initials}
@@ -906,7 +912,7 @@ const getTabOpenBackground = (section: string, isOpen: boolean) => {
                       </div>
                     ))}
                   </div>
-                ) : null}
+                )}
               </section>
             );
           })}
