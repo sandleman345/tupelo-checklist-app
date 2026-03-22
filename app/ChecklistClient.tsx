@@ -702,7 +702,7 @@ export default function ChecklistClient({
               </span>
 
               <h1 className="text-3xl font-bold text-slate-50 drop-shadow-sm">
-                Tupelo Tea Checklist (Preview Mode)
+                Tupelo Tea Checklist
               </h1>
 
               <span className={`text-lg ${todayAccent.color}`}>
@@ -711,7 +711,7 @@ export default function ChecklistClient({
             </div>
 
             <p className="text-slate-300">
-              Tap your initials to complete a task
+             Tap your initials to complete each task
             </p>
 
             <div className="mt-2 text-sm text-slate-300">
