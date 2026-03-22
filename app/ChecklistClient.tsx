@@ -702,7 +702,7 @@ export default function ChecklistClient({
               </span>
 
               <h1 className="text-3xl font-bold text-slate-50 drop-shadow-sm">
-                Tupelo Tea Checklist
+                Tupelo Tea Checklist (Preview Mode)
               </h1>
 
               <span className={`text-lg ${todayAccent.color}`}>
