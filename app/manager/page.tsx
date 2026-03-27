@@ -23,6 +23,30 @@ type ChecklistItem = {
   completed: boolean;
   employee_initials: string | null;
   completed_at: string | null;
+  source_weekday?: number | null;
+};
+
+type TaskTemplate = {
+  id: number;
+  task_name: string;
+  task_type: string | null;
+  task_section: string | null;
+  active: boolean;
+  sort_order: number | null;
+  weekday: number | null;
+};
+
+const normalizeTaskName = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
+
+const getWeekdayFromDateString = (dateString: string) => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day).getDay();
+};
+
+const formatCompletedAt = (value: string | null) => {
+  if (!value) return "";
+  return new Date(value).toLocaleString();
 };
 
 export default async function ManagerPage(props: {
@@ -37,9 +61,8 @@ export default async function ManagerPage(props: {
   });
 
   const selectedDate = resolvedParams.date || today;
-  
   const isSevenDayMode = resolvedParams.mode === "7d";
-const isThisWeekMode = resolvedParams.mode === "week";
+  const isThisWeekMode = resolvedParams.mode === "week";
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -54,12 +77,13 @@ const isThisWeekMode = resolvedParams.mode === "week";
   const sevenDaysAgoStr = sevenDaysAgo.toLocaleDateString("en-CA", {
     timeZone: "America/New_York",
   });
-  const startOfWeek = new Date();
-startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
 
-const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
-  timeZone: "America/New_York",
-});
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+  const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
 
   let checklistQuery = supabase
     .from("checklist_items")
@@ -68,16 +92,16 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
     .order("id", { ascending: true });
 
   if (isSevenDayMode) {
-  checklistQuery = checklistQuery
-    .gte("checklist_date", sevenDaysAgoStr)
-    .lte("checklist_date", today);
-} else if (isThisWeekMode) {
-  checklistQuery = checklistQuery
-    .gte("checklist_date", startOfWeekStr)
-    .lte("checklist_date", today);
-} else {
-  checklistQuery = checklistQuery.eq("checklist_date", selectedDate);
-}
+    checklistQuery = checklistQuery
+      .gte("checklist_date", sevenDaysAgoStr)
+      .lte("checklist_date", today);
+  } else if (isThisWeekMode) {
+    checklistQuery = checklistQuery
+      .gte("checklist_date", startOfWeekStr)
+      .lte("checklist_date", today);
+  } else {
+    checklistQuery = checklistQuery.eq("checklist_date", selectedDate);
+  }
 
   const { data: items, error } = await checklistQuery;
 
@@ -86,6 +110,82 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
     .select("*")
     .eq("active", true)
     .order("sort_order", { ascending: true });
+
+  const { data: taskTemplates } = await supabase
+    .from("task_templates")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+
+  const typedTaskTemplates = (taskTemplates || []) as TaskTemplate[];
+
+  const getScheduledWeeklySetForDate = (dateString: string) => {
+    const weekday = getWeekdayFromDateString(dateString);
+
+    return new Set(
+      typedTaskTemplates
+        .filter(
+          (template) =>
+            template.active &&
+            template.task_section === "Weekly" &&
+            template.weekday === weekday
+        )
+        .map((template) => normalizeTaskName(template.task_name))
+    );
+  };
+
+  const isExtraWeeklyTask = (item: ChecklistItem) => {
+    if (item.task_section !== "Weekly") return false;
+
+    const checklistWeekday = getWeekdayFromDateString(item.checklist_date);
+
+    if (
+      item.source_weekday !== null &&
+      item.source_weekday !== undefined &&
+      item.source_weekday !== checklistWeekday
+    ) {
+      return true;
+    }
+
+    const scheduledWeeklySet = getScheduledWeeklySetForDate(item.checklist_date);
+
+    return !scheduledWeeklySet.has(normalizeTaskName(item.task_name));
+  };
+
+  const TaskCard = ({ item }: { item: ChecklistItem }) => (
+    <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
+      <div className="text-lg font-semibold text-slate-50">{item.task_name}</div>
+
+      <div className="mt-1 text-sm text-slate-300">
+        Date: {item.checklist_date}
+      </div>
+
+      <div className="mt-1 text-sm text-slate-300">
+        Section: {item.task_section}
+      </div>
+
+      {item.source_weekday !== null && item.source_weekday !== undefined && (
+        <div className="mt-1 text-sm text-slate-400">
+          Source weekday: {item.source_weekday}
+        </div>
+      )}
+
+      <div className="mt-1 text-sm text-green-300">Status: Completed</div>
+
+      {item.employee_initials && (
+        <div className="mt-1 text-sm text-slate-300">
+          By: {item.employee_initials}
+        </div>
+      )}
+
+      {item.completed_at && (
+        <div className="mt-1 text-sm text-slate-400">
+          Completed at: {formatCompletedAt(item.completed_at)}
+        </div>
+      )}
+    </div>
+  );
 
   const navButtons = (
     <div className="flex flex-wrap gap-2">
@@ -108,10 +208,10 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
   );
 
   const subtitle = isSevenDayMode
-  ? `Viewing last 7 days (${sevenDaysAgoStr} to ${today})`
-  : isThisWeekMode
-  ? `Viewing this week (${startOfWeekStr} to ${today})`
-  : `Viewing checklist for ${selectedDate}`;
+    ? `Viewing last 7 days (${sevenDaysAgoStr} to ${today})`
+    : isThisWeekMode
+    ? `Viewing this week (${startOfWeekStr} to ${today})`
+    : `Viewing checklist for ${selectedDate}`;
 
   if (error) {
     return (
@@ -144,6 +244,38 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
 
   const missedTasks = safeItems.filter((i) => !i.completed);
   const completedTasks = safeItems.filter((i) => i.completed);
+
+  const missedDaily = missedTasks.filter(
+    (item) => item.task_section === "Daily"
+  );
+
+  const missedNightly = missedTasks.filter(
+    (item) => item.task_section === "Nightly Closing"
+  );
+
+  const missedWeeklyScheduled = missedTasks.filter(
+    (item) => item.task_section === "Weekly" && !isExtraWeeklyTask(item)
+  );
+
+  const missedWeeklyExtra = missedTasks.filter(
+    (item) => item.task_section === "Weekly" && isExtraWeeklyTask(item)
+  );
+
+  const completedDaily = completedTasks.filter(
+    (item) => item.task_section === "Daily"
+  );
+
+  const completedNightly = completedTasks.filter(
+    (item) => item.task_section === "Nightly Closing"
+  );
+
+  const completedWeeklyScheduled = completedTasks.filter(
+    (item) => item.task_section === "Weekly" && !isExtraWeeklyTask(item)
+  );
+
+  const completedWeeklyExtra = completedTasks.filter(
+    (item) => item.task_section === "Weekly" && isExtraWeeklyTask(item)
+  );
 
   const initialsCounts: Record<string, number> = {};
 
@@ -261,53 +393,50 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
         <HistoryDateForm selectedDate={selectedDate} today={today} />
 
         <div className="mb-6 inline-flex rounded-2xl border border-slate-700 bg-slate-900 p-1 shadow-sm">
-  {/* Today */}
-  <a
-    href={`/manager?date=${today}`}
-    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-      !isSevenDayMode && selectedDate === today
-        ? "bg-blue-500 text-white shadow"
-        : "text-slate-300 hover:bg-slate-800"
-    }`}
-  >
-    Today
-  </a>
+          <a
+            href={`/manager?date=${today}`}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+              !isSevenDayMode && !isThisWeekMode && selectedDate === today
+                ? "bg-blue-500 text-white shadow"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            Today
+          </a>
 
-  {/* Yesterday */}
-  <a
-    href={`/manager?date=${yesterdayStr}`}
-    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-      !isSevenDayMode && selectedDate === yesterdayStr
-        ? "bg-blue-500 text-white shadow"
-        : "text-slate-300 hover:bg-slate-800"
-    }`}
-  >
-    Yesterday
-  </a>
-  <a
-  href="/manager?mode=week"
-  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-    isThisWeekMode
-      ? "bg-blue-500 text-white shadow"
-      : "text-slate-300 hover:bg-slate-800"
-  }`}
->
-  This Week
-</a>
+          <a
+            href={`/manager?date=${yesterdayStr}`}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+              !isSevenDayMode && !isThisWeekMode && selectedDate === yesterdayStr
+                ? "bg-blue-500 text-white shadow"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            Yesterday
+          </a>
 
-  {/* 7 Day */}
-  <a
-    href="/manager?mode=7d"
-    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-      isSevenDayMode
-        ? "bg-blue-500 text-white shadow"
-        : "text-slate-300 hover:bg-slate-800"
-    }`}
-    
-  >
-    7 Days
-  </a>
-</div>
+          <a
+            href="/manager?mode=week"
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+              isThisWeekMode
+                ? "bg-blue-500 text-white shadow"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            This Week
+          </a>
+
+          <a
+            href="/manager?mode=7d"
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+              isSevenDayMode
+                ? "bg-blue-500 text-white shadow"
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            7 Days
+          </a>
+        </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-center shadow-sm">
@@ -344,15 +473,18 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
               Team Activity
             </h2>
             <div className="text-sm text-slate-400">
-              {isSevenDayMode ? "Last 7 Days" : selectedDate}
+              {isSevenDayMode
+                ? "Last 7 Days"
+                : isThisWeekMode
+                ? "This Week"
+                : selectedDate}
             </div>
           </div>
 
           {topPerformer && (
             <div className="mb-3 rounded-xl border border-yellow-500 bg-yellow-900/20 px-4 py-2 text-sm text-yellow-300">
               🥇 Top Contributor: {topPerformer.name || topPerformer.initials} (
-              {topPerformer.count}{" "}
-              {topPerformer.count === 1 ? "task" : "tasks"})
+              {topPerformer.count} {topPerformer.count === 1 ? "task" : "tasks"})
             </div>
           )}
 
@@ -470,10 +602,10 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-  ? `Tasks not completed from ${sevenDaysAgoStr} to ${today}`
-  : isThisWeekMode
-  ? `Tasks not completed from ${startOfWeekStr} to ${today}`
-  : `Tasks not completed for ${selectedDate}`}
+              ? `Tasks not completed from ${sevenDaysAgoStr} to ${today}`
+              : isThisWeekMode
+              ? `Tasks not completed from ${startOfWeekStr} to ${today}`
+              : `Tasks not completed for ${selectedDate}`}
           </p>
 
           {missedTasks.length === 0 ? (
@@ -481,29 +613,155 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
               No missed tasks. Everything was completed.
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
-              {missedTasks.map((item) => (
-                <div
-                  key={`${item.checklist_date}-${item.id}`}
-                  className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                >
-                  <div className="text-lg font-semibold text-slate-50">
-                    {item.task_name}
-                  </div>
+            <div className="mt-4 space-y-6">
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-blue-300">
+                  Daily
+                </h3>
+                {missedDaily.length === 0 ? (
+                  <div className="text-sm text-slate-400">No missed daily tasks.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {missedDaily.map((item) => (
+                      <div
+                        key={`${item.checklist_date}-${item.id}`}
+                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
+                      >
+                        <div className="text-lg font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
 
-                  <div className="mt-1 text-sm text-slate-300">
-                    Date: {item.checklist_date}
-                  </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Date: {item.checklist_date}
+                        </div>
 
-                  <div className="mt-1 text-sm text-slate-300">
-                    Section: {item.task_section}
-                  </div>
+                        <div className="mt-1 text-sm text-slate-300">
+                          Section: {item.task_section}
+                        </div>
 
-                  <div className="mt-1 text-sm text-red-300">
-                    Status: Not completed
+                        <div className="mt-1 text-sm text-red-300">
+                          Status: Not completed
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-amber-300">
+                  Nightly Closing
+                </h3>
+                {missedNightly.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No missed nightly closing tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {missedNightly.map((item) => (
+                      <div
+                        key={`${item.checklist_date}-${item.id}`}
+                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
+                      >
+                        <div className="text-lg font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Date: {item.checklist_date}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Section: {item.task_section}
+                        </div>
+
+                        <div className="mt-1 text-sm text-red-300">
+                          Status: Not completed
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-green-300">
+                  Weekly
+                </h3>
+                {missedWeeklyScheduled.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No missed scheduled weekly tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {missedWeeklyScheduled.map((item) => (
+                      <div
+                        key={`${item.checklist_date}-${item.id}`}
+                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
+                      >
+                        <div className="text-lg font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Date: {item.checklist_date}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Section: {item.task_section}
+                        </div>
+
+                        <div className="mt-1 text-sm text-red-300">
+                          Status: Not completed
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-purple-300">
+                  Extra Weekly
+                </h3>
+                {missedWeeklyExtra.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No missed extra weekly tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {missedWeeklyExtra.map((item) => (
+                      <div
+                        key={`${item.checklist_date}-${item.id}`}
+                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
+                      >
+                        <div className="text-lg font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Date: {item.checklist_date}
+                        </div>
+
+                        <div className="mt-1 text-sm text-slate-300">
+                          Section: {item.task_section}
+                        </div>
+
+                        {item.source_weekday !== null &&
+                          item.source_weekday !== undefined && (
+                            <div className="mt-1 text-sm text-slate-400">
+                              Source weekday: {item.source_weekday}
+                            </div>
+                          )}
+
+                        <div className="mt-1 text-sm text-red-300">
+                          Status: Not completed
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </details>
@@ -520,55 +778,87 @@ const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-  ? `Tasks completed from ${sevenDaysAgoStr} to ${today}`
-  : isThisWeekMode
-  ? `Tasks completed from ${startOfWeekStr} to ${today}`
-  : `Tasks completed for ${selectedDate}`}
+              ? `Tasks completed from ${sevenDaysAgoStr} to ${today}`
+              : isThisWeekMode
+              ? `Tasks completed from ${startOfWeekStr} to ${today}`
+              : `Tasks completed for ${selectedDate}`}
           </p>
 
           {completedTasks.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-300">
-              No completed tasks for this view.
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {completedTasks.map((item) => (
-                <div
-                  key={`${item.checklist_date}-${item.id}`}
-                  className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                >
-                  <div className="text-lg font-semibold text-slate-50">
-                    {item.task_name}
-                  </div>
+  <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-300">
+    No completed tasks for this view.
+  </div>
+) : (
+  <div className="mt-4 space-y-6">
+    <div>
+      <h3 className="mb-2 text-lg font-semibold text-purple-300">
+        Extra Weekly
+      </h3>
+      {completedWeeklyExtra.length === 0 ? (
+        <div className="text-sm text-slate-400">
+          No extra weekly tasks completed.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {completedWeeklyExtra.map((item) => (
+            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
 
-                  <div className="mt-1 text-sm text-slate-300">
-                    Date: {item.checklist_date}
-                  </div>
+    <div>
+      <h3 className="mb-2 text-lg font-semibold text-blue-300">
+        Daily
+      </h3>
+      {completedDaily.length === 0 ? (
+        <div className="text-sm text-slate-400">
+          No completed daily tasks.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {completedDaily.map((item) => (
+            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
 
-                  <div className="mt-1 text-sm text-slate-300">
-                    Section: {item.task_section}
-                  </div>
+    <div>
+      <h3 className="mb-2 text-lg font-semibold text-amber-300">
+        Nightly Closing
+      </h3>
+      {completedNightly.length === 0 ? (
+        <div className="text-sm text-slate-400">
+          No completed nightly closing tasks.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {completedNightly.map((item) => (
+            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
 
-                  <div className="mt-1 text-sm text-green-300">
-                    Status: Completed
-                  </div>
-
-                  {item.employee_initials && (
-                    <div className="mt-1 text-sm text-slate-300">
-                      By: {item.employee_initials}
-                    </div>
-                  )}
-
-                  {item.completed_at && (
-                    <div className="mt-1 text-sm text-slate-400">
-                      Completed at:{" "}
-                      {new Date(item.completed_at).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+    <div>
+      <h3 className="mb-2 text-lg font-semibold text-green-300">
+        Weekly
+      </h3>
+      {completedWeeklyScheduled.length === 0 ? (
+        <div className="text-sm text-slate-400">
+          No scheduled weekly tasks completed.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {completedWeeklyScheduled.map((item) => (
+            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
         </details>
 
         {(isSevenDayMode || isThisWeekMode) && sortedDates.length > 0 && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type ChecklistItem = {
@@ -11,6 +11,7 @@ type ChecklistItem = {
   completed: boolean;
   employee_initials: string | null;
   completed_at: string | null;
+  source_weekday: number | null;
 };
 
 type TeamMember = {
@@ -35,16 +36,78 @@ type CelebrationTheme = {
   bg: string;
 };
 
+type TaskTemplate = {
+  id: number;
+  task_name: string;
+  task_type: string | null;
+  task_section: string | null;
+  active: boolean;
+  sort_order: number | null;
+  weekday: number | null;
+};
+
 type ChecklistClientProps = {
   initialItems: ChecklistItem[];
   teamMembers: TeamMember[];
+  taskTemplates: TaskTemplate[];
 };
 
 const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
 
+const HISTORY_TAB_ORDER = [
+  "Daily",
+  "Nightly Closing",
+  "Weekly",
+  "Extra Weekly",
+] as const;
+
+const normalizeTaskName = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
+
+const getWeekdayFromDateString = (dateString: string) => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day).getDay();
+};
+
+const formatCompletedTime = (value: string | null) => {
+  if (!value) return "";
+
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+const WEEKDAY_LABELS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+function getStartOfWeek(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  const day = date.getDay();
+  const diff = date.getDate() - day;
+
+  const start = new Date(date);
+  start.setDate(diff);
+  start.setHours(0, 0, 0, 0);
+
+  return start;
+}
+
+function formatDateForDB(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 export default function ChecklistClient({
   initialItems,
   teamMembers,
+  taskTemplates,
 }: ChecklistClientProps) {
   const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [toastMessage, setToastMessage] = useState("");
@@ -56,6 +119,9 @@ export default function ChecklistClient({
     text: "text-green-300",
     bg: "bg-slate-900/95",
   });
+
+  const [addingExtraWeeklyTask, setAddingExtraWeeklyTask] = useState(false);
+  const [availableExtraWeeklyCount, setAvailableExtraWeeklyCount] = useState(0);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: false,
@@ -115,6 +181,7 @@ export default function ChecklistClient({
   const todayAccent = accentStyles[accentIndex];
 
   const checklistDate = initialItems[0]?.checklist_date || today;
+  const todayWeekday = new Date(`${checklistDate}T12:00:00`).getDay();
   const isReadOnly = checklistDate !== today;
 
   const totalTasks = items.length;
@@ -557,6 +624,164 @@ export default function ChecklistClient({
 
   const getWeekday = () => weekdayName;
 
+  const weeklyItems = items.filter((item) => item.task_section === "Weekly");
+
+  const todaysWeeklyItems = weeklyItems.filter(
+    (item) =>
+      item.source_weekday === todayWeekday || item.source_weekday === null
+  );
+
+  const extraWeeklyItems = weeklyItems.filter(
+    (item) =>
+      item.source_weekday !== null && item.source_weekday !== todayWeekday
+  );
+
+  const todaysWeeklyComplete =
+    todaysWeeklyItems.length > 0 &&
+    todaysWeeklyItems.every((item) => item.completed);
+
+  useEffect(() => {
+    async function checkAvailable() {
+      try {
+        const weekStart = getStartOfWeek(checklistDate);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+
+        const startDate = formatDateForDB(weekStart);
+        const endDate = formatDateForDB(weekEnd);
+
+        const { data: templates, error: templatesError } = await supabase
+          .from("task_templates")
+          .select("task_name, weekday, task_type")
+          .eq("active", true)
+          .eq("task_section", "Weekly");
+
+        if (templatesError) throw templatesError;
+
+        const { data: weekItems, error: weekItemsError } = await supabase
+          .from("checklist_items")
+          .select("task_name, completed, source_weekday")
+          .eq("task_section", "Weekly")
+          .gte("checklist_date", startDate)
+          .lte("checklist_date", endDate);
+
+        if (weekItemsError) throw weekItemsError;
+
+        const completedKeys = new Set(
+          (weekItems || [])
+            .filter((i) => i.completed)
+            .map((i) => `${i.task_name}::${i.source_weekday}`)
+        );
+
+        const currentKeys = new Set(
+          weeklyItems.map((i) => `${i.task_name}::${i.source_weekday}`)
+        );
+
+        const count = (templates || []).filter((t) => {
+          if (t.weekday === null) return false;
+          if (t.weekday === todayWeekday) return false;
+
+          const key = `${t.task_name}::${t.weekday}`;
+
+          if (completedKeys.has(key)) return false;
+          if (currentKeys.has(key)) return false;
+
+          return true;
+        }).length;
+
+        setAvailableExtraWeeklyCount(count);
+      } catch (error) {
+        console.error("Error checking available extra weekly tasks:", error);
+        setAvailableExtraWeeklyCount(0);
+      }
+    }
+
+    void checkAvailable();
+  }, [checklistDate, items, todayWeekday, weeklyItems]);
+
+  async function handleAddExtraWeeklyTask() {
+    try {
+      setAddingExtraWeeklyTask(true);
+
+      const weekStart = getStartOfWeek(checklistDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      const startDate = formatDateForDB(weekStart);
+      const endDate = formatDateForDB(weekEnd);
+
+      const { data: templates, error: templatesError } = await supabase
+        .from("task_templates")
+        .select("task_name, weekday, task_type")
+        .eq("active", true)
+        .eq("task_section", "Weekly")
+        .order("sort_order", { ascending: true });
+
+      if (templatesError) throw templatesError;
+
+      const { data: weekItems, error: weekItemsError } = await supabase
+        .from("checklist_items")
+        .select("task_name, completed, source_weekday")
+        .eq("task_section", "Weekly")
+        .gte("checklist_date", startDate)
+        .lte("checklist_date", endDate);
+
+      if (weekItemsError) throw weekItemsError;
+
+      const completedKeys = new Set(
+        (weekItems || [])
+          .filter((i) => i.completed)
+          .map((i) => `${i.task_name}::${i.source_weekday}`)
+      );
+
+      const currentKeys = new Set(
+        weeklyItems.map((i) => `${i.task_name}::${i.source_weekday}`)
+      );
+
+      const nextTask = (templates || []).find((t) => {
+        if (t.weekday === null) return false;
+        if (t.weekday === todayWeekday) return false;
+
+        const key = `${t.task_name}::${t.weekday}`;
+
+        if (completedKeys.has(key)) return false;
+        if (currentKeys.has(key)) return false;
+
+        return true;
+      });
+
+      if (!nextTask) return;
+
+      const { data: insertedRows, error: insertError } = await supabase
+        .from("checklist_items")
+        .insert({
+          checklist_date: checklistDate,
+          task_name: nextTask.task_name,
+          task_type: nextTask.task_type,
+          task_section: "Weekly",
+          completed: false,
+          employee_initials: null,
+          completed_at: null,
+          source_weekday: nextTask.weekday,
+        })
+        .select("*");
+
+      if (insertError) throw insertError;
+
+      if (insertedRows && insertedRows.length > 0) {
+        setItems((prev) => [...prev, ...insertedRows]);
+      }
+    } catch (error: any) {
+      console.error("Extra weekly task error message:", error?.message);
+      console.error("Extra weekly task error details:", error?.details);
+      console.error("Extra weekly task error hint:", error?.hint);
+      console.error("Full extra weekly task error:", error);
+      alert(`Extra weekly task error:\n${error?.message || "Unknown error"}`);
+    } finally {
+      setAddingExtraWeeklyTask(false);
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden text-slate-100">
       <style jsx>{`
@@ -780,6 +1005,11 @@ export default function ChecklistClient({
               (item) => item.task_section === section
             );
 
+            const isWeekly = section === "Weekly";
+            const displayItems = isWeekly
+              ? [...todaysWeeklyItems, ...extraWeeklyItems]
+              : sectionItems;
+
             if (sectionItems.length === 0) return null;
 
             const stats = getSectionStats(section);
@@ -842,7 +1072,7 @@ export default function ChecklistClient({
 
                 {openSections[section] && (
                   <div className="space-y-4">
-                    {sectionItems.map((item) => (
+                    {displayItems.map((item) => (
                       <div
                         key={item.id}
                         className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
@@ -897,6 +1127,14 @@ export default function ChecklistClient({
                           </div>
                         </div>
 
+                        {section === "Weekly" &&
+                          item.source_weekday !== null &&
+                          item.source_weekday !== todayWeekday && (
+                            <div className="mt-2 text-xs text-slate-400">
+                              Scheduled for {WEEKDAY_LABELS[item.source_weekday]}
+                            </div>
+                          )}
+
                         {item.employee_initials && (
                           <div className="mt-3 text-sm text-slate-300">
                             Completed by: {item.employee_initials}
@@ -911,6 +1149,22 @@ export default function ChecklistClient({
                         )}
                       </div>
                     ))}
+
+                    {section === "Weekly" &&
+                      !isReadOnly &&
+                      todaysWeeklyComplete &&
+                      availableExtraWeeklyCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleAddExtraWeeklyTask}
+                          disabled={addingExtraWeeklyTask}
+                          className="mt-4 w-full rounded-2xl border border-green-400/30 bg-green-500/10 px-4 py-3 text-sm font-semibold text-green-200 transition hover:bg-green-500/20 disabled:opacity-50"
+                        >
+                          {addingExtraWeeklyTask
+                            ? "Adding task..."
+                            : "+ Show Another Weekly Task"}
+                        </button>
+                      )}
                   </div>
                 )}
               </section>
