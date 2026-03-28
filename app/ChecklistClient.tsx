@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type ChecklistItem = {
@@ -12,6 +12,7 @@ type ChecklistItem = {
   employee_initials: string | null;
   completed_at: string | null;
   source_weekday: number | null;
+  is_rollover?: boolean | null;
 };
 
 type TeamMember = {
@@ -54,60 +55,9 @@ type ChecklistClientProps = {
 
 const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
 
-const HISTORY_TAB_ORDER = [
-  "Daily",
-  "Nightly Closing",
-  "Weekly",
-  "Extra Weekly",
-] as const;
-
-const normalizeTaskName = (value: string | null | undefined) =>
-  (value ?? "").trim().toLowerCase();
-
-const getWeekdayFromDateString = (dateString: string) => {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day).getDay();
-};
-
-const formatCompletedTime = (value: string | null) => {
-  if (!value) return "";
-
-  return new Date(value).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-const WEEKDAY_LABELS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
-
-function getStartOfWeek(dateString: string) {
-  const date = new Date(`${dateString}T12:00:00`);
-  const day = date.getDay();
-  const diff = date.getDate() - day;
-
-  const start = new Date(date);
-  start.setDate(diff);
-  start.setHours(0, 0, 0, 0);
-
-  return start;
-}
-
-function formatDateForDB(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 export default function ChecklistClient({
   initialItems,
   teamMembers,
-  taskTemplates,
 }: ChecklistClientProps) {
   const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [toastMessage, setToastMessage] = useState("");
@@ -119,9 +69,6 @@ export default function ChecklistClient({
     text: "text-green-300",
     bg: "bg-slate-900/95",
   });
-
-  const [addingExtraWeeklyTask, setAddingExtraWeeklyTask] = useState(false);
-  const [availableExtraWeeklyCount, setAvailableExtraWeeklyCount] = useState(0);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: false,
@@ -146,11 +93,6 @@ export default function ChecklistClient({
 
   const today = now.toLocaleDateString("en-CA", {
     timeZone: "America/New_York",
-  });
-
-  const weekdayName = now.toLocaleDateString("en-US", {
-    timeZone: "America/New_York",
-    weekday: "long",
   });
 
   const hourInEastern = Number(
@@ -179,10 +121,8 @@ export default function ChecklistClient({
     ) % accentStyles.length;
 
   const todayAccent = accentStyles[accentIndex];
-
-  const checklistDate = initialItems[0]?.checklist_date || today;
-  const todayWeekday = new Date(`${checklistDate}T12:00:00`).getDay();
-  const isReadOnly = checklistDate !== today;
+  const checklistDate = today;
+  const isReadOnly = false;
 
   const totalTasks = items.length;
   const completedTasks = items.filter((item) => item.completed).length;
@@ -595,17 +535,21 @@ export default function ChecklistClient({
     return "text-slate-100";
   };
 
-  const getCompletedCardColor = (
-    section: string | null,
-    completed: boolean
-  ) => {
-    if (!completed) {
+  const getCompletedCardColor = (item: ChecklistItem) => {
+    if (item.task_section === "Weekly" && item.is_rollover) {
+      return item.completed
+        ? "border-red-300/40 bg-red-500/10"
+        : "border-red-400/50 bg-red-500/12";
+    }
+
+    if (!item.completed) {
       return "border-white/10 bg-white/5";
     }
 
-    if (section === "Daily") return "border-blue-300/25 bg-blue-500/10";
-    if (section === "Nightly Closing") return "border-amber-300/25 bg-amber-400/10";
-    if (section === "Weekly") return "border-green-300/25 bg-green-500/10";
+    if (item.task_section === "Daily") return "border-blue-300/25 bg-blue-500/10";
+    if (item.task_section === "Nightly Closing")
+      return "border-amber-300/25 bg-amber-400/10";
+    if (item.task_section === "Weekly") return "border-green-300/25 bg-green-500/10";
     return "border-white/10 bg-white/5";
   };
 
@@ -621,166 +565,6 @@ export default function ChecklistClient({
     }
     return "border-slate-300 bg-slate-300 text-slate-950 scale-105";
   };
-
-  const getWeekday = () => weekdayName;
-
-  const weeklyItems = items.filter((item) => item.task_section === "Weekly");
-
-  const todaysWeeklyItems = weeklyItems.filter(
-    (item) =>
-      item.source_weekday === todayWeekday || item.source_weekday === null
-  );
-
-  const extraWeeklyItems = weeklyItems.filter(
-    (item) =>
-      item.source_weekday !== null && item.source_weekday !== todayWeekday
-  );
-
-  const todaysWeeklyComplete =
-    todaysWeeklyItems.length > 0 &&
-    todaysWeeklyItems.every((item) => item.completed);
-
-  useEffect(() => {
-    async function checkAvailable() {
-      try {
-        const weekStart = getStartOfWeek(checklistDate);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-
-        const startDate = formatDateForDB(weekStart);
-        const endDate = formatDateForDB(weekEnd);
-
-        const { data: templates, error: templatesError } = await supabase
-          .from("task_templates")
-          .select("task_name, weekday, task_type")
-          .eq("active", true)
-          .eq("task_section", "Weekly");
-
-        if (templatesError) throw templatesError;
-
-        const { data: weekItems, error: weekItemsError } = await supabase
-          .from("checklist_items")
-          .select("task_name, completed, source_weekday")
-          .eq("task_section", "Weekly")
-          .gte("checklist_date", startDate)
-          .lte("checklist_date", endDate);
-
-        if (weekItemsError) throw weekItemsError;
-
-        const completedKeys = new Set(
-          (weekItems || [])
-            .filter((i) => i.completed)
-            .map((i) => `${i.task_name}::${i.source_weekday}`)
-        );
-
-        const currentKeys = new Set(
-          weeklyItems.map((i) => `${i.task_name}::${i.source_weekday}`)
-        );
-
-        const count = (templates || []).filter((t) => {
-          if (t.weekday === null) return false;
-          if (t.weekday === todayWeekday) return false;
-
-          const key = `${t.task_name}::${t.weekday}`;
-
-          if (completedKeys.has(key)) return false;
-          if (currentKeys.has(key)) return false;
-
-          return true;
-        }).length;
-
-        setAvailableExtraWeeklyCount(count);
-      } catch (error) {
-        console.error("Error checking available extra weekly tasks:", error);
-        setAvailableExtraWeeklyCount(0);
-      }
-    }
-
-    void checkAvailable();
-  }, [checklistDate, items, todayWeekday, weeklyItems]);
-
-  async function handleAddExtraWeeklyTask() {
-    try {
-      setAddingExtraWeeklyTask(true);
-
-      const weekStart = getStartOfWeek(checklistDate);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-
-      const startDate = formatDateForDB(weekStart);
-      const endDate = formatDateForDB(weekEnd);
-
-      const { data: templates, error: templatesError } = await supabase
-        .from("task_templates")
-        .select("task_name, weekday, task_type")
-        .eq("active", true)
-        .eq("task_section", "Weekly")
-        .order("sort_order", { ascending: true });
-
-      if (templatesError) throw templatesError;
-
-      const { data: weekItems, error: weekItemsError } = await supabase
-        .from("checklist_items")
-        .select("task_name, completed, source_weekday")
-        .eq("task_section", "Weekly")
-        .gte("checklist_date", startDate)
-        .lte("checklist_date", endDate);
-
-      if (weekItemsError) throw weekItemsError;
-
-      const completedKeys = new Set(
-        (weekItems || [])
-          .filter((i) => i.completed)
-          .map((i) => `${i.task_name}::${i.source_weekday}`)
-      );
-
-      const currentKeys = new Set(
-        weeklyItems.map((i) => `${i.task_name}::${i.source_weekday}`)
-      );
-
-      const nextTask = (templates || []).find((t) => {
-        if (t.weekday === null) return false;
-        if (t.weekday === todayWeekday) return false;
-
-        const key = `${t.task_name}::${t.weekday}`;
-
-        if (completedKeys.has(key)) return false;
-        if (currentKeys.has(key)) return false;
-
-        return true;
-      });
-
-      if (!nextTask) return;
-
-      const { data: insertedRows, error: insertError } = await supabase
-        .from("checklist_items")
-        .insert({
-          checklist_date: checklistDate,
-          task_name: nextTask.task_name,
-          task_type: nextTask.task_type,
-          task_section: "Weekly",
-          completed: false,
-          employee_initials: null,
-          completed_at: null,
-          source_weekday: nextTask.weekday,
-        })
-        .select("*");
-
-      if (insertError) throw insertError;
-
-      if (insertedRows && insertedRows.length > 0) {
-        setItems((prev) => [...prev, ...insertedRows]);
-      }
-    } catch (error: any) {
-      console.error("Extra weekly task error message:", error?.message);
-      console.error("Extra weekly task error details:", error?.details);
-      console.error("Extra weekly task error hint:", error?.hint);
-      console.error("Full extra weekly task error:", error);
-      alert(`Extra weekly task error:\n${error?.message || "Unknown error"}`);
-    } finally {
-      setAddingExtraWeeklyTask(false);
-    }
-  }
 
   return (
     <main className="relative min-h-screen overflow-hidden text-slate-100">
@@ -936,18 +720,12 @@ export default function ChecklistClient({
             </div>
 
             <p className="text-slate-300">
-             Tap your initials to complete each task
+              Tap your initials to complete each task
             </p>
 
             <div className="mt-2 text-sm text-slate-300">
               Checklist Date: {checklistDate}
             </div>
-
-            {isReadOnly && (
-              <div className="mt-3 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 backdrop-blur-md">
-                This checklist is from a previous day and is now read-only.
-              </div>
-            )}
 
             <div className="mt-3 flex flex-wrap gap-2">
               <a
@@ -1001,14 +779,13 @@ export default function ChecklistClient({
           className="mx-auto max-w-5xl space-y-8 px-4 py-6"
         >
           {SECTION_ORDER.map((section) => {
-            const sectionItems = items.filter(
-              (item) => item.task_section === section
-            );
-
-            const isWeekly = section === "Weekly";
-            const displayItems = isWeekly
-              ? [...todaysWeeklyItems, ...extraWeeklyItems]
-              : sectionItems;
+            const sectionItems = items
+              .filter((item) => item.task_section === section)
+              .sort((a, b) => {
+                const aRollover = a.is_rollover ? 1 : 0;
+                const bRollover = b.is_rollover ? 1 : 0;
+                return bRollover - aRollover;
+              });
 
             if (sectionItems.length === 0) return null;
 
@@ -1042,9 +819,7 @@ export default function ChecklistClient({
                       {openSections[section] ? "▼" : "▶"}
                     </span>
 
-                    <span>
-                      {section === "Weekly" ? `Weekly (${getWeekday()})` : section}
-                    </span>
+                    <span>{section}</span>
                   </span>
 
                   <span className="text-sm text-slate-300">
@@ -1072,14 +847,26 @@ export default function ChecklistClient({
 
                 {openSections[section] && (
                   <div className="space-y-4">
-                    {displayItems.map((item) => (
+                    {section === "Weekly" &&
+                      sectionItems.some((item) => item.is_rollover) && (
+                        <div className="rounded-2xl border border-red-400/45 bg-red-500/12 px-4 py-3 text-sm font-semibold text-red-200">
+                          Rolled over from last week — must be completed first.
+                        </div>
+                      )}
+
+                    {sectionItems.map((item) => (
                       <div
                         key={item.id}
                         className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
-                          item.task_section,
-                          item.completed
+                          item
                         )}`}
                       >
+                        {section === "Weekly" && item.is_rollover && (
+                          <div className="mb-3 inline-flex rounded-full border border-red-300/40 bg-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-200">
+                            Rolled Over · High Priority
+                          </div>
+                        )}
+
                         <div className="text-xl font-semibold text-slate-50">
                           {item.task_name}
                         </div>
@@ -1127,14 +914,6 @@ export default function ChecklistClient({
                           </div>
                         </div>
 
-                        {section === "Weekly" &&
-                          item.source_weekday !== null &&
-                          item.source_weekday !== todayWeekday && (
-                            <div className="mt-2 text-xs text-slate-400">
-                              Scheduled for {WEEKDAY_LABELS[item.source_weekday]}
-                            </div>
-                          )}
-
                         {item.employee_initials && (
                           <div className="mt-3 text-sm text-slate-300">
                             Completed by: {item.employee_initials}
@@ -1149,22 +928,6 @@ export default function ChecklistClient({
                         )}
                       </div>
                     ))}
-
-                    {section === "Weekly" &&
-                      !isReadOnly &&
-                      todaysWeeklyComplete &&
-                      availableExtraWeeklyCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={handleAddExtraWeeklyTask}
-                          disabled={addingExtraWeeklyTask}
-                          className="mt-4 w-full rounded-2xl border border-green-400/30 bg-green-500/10 px-4 py-3 text-sm font-semibold text-green-200 transition hover:bg-green-500/20 disabled:opacity-50"
-                        >
-                          {addingExtraWeeklyTask
-                            ? "Adding task..."
-                            : "+ Show Another Weekly Task"}
-                        </button>
-                      )}
                   </div>
                 )}
               </section>

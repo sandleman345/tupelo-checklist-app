@@ -23,31 +23,39 @@ type ChecklistItem = {
   completed: boolean;
   employee_initials: string | null;
   completed_at: string | null;
-  source_weekday?: number | null;
-};
-
-type TaskTemplate = {
-  id: number;
-  task_name: string;
-  task_type: string | null;
-  task_section: string | null;
-  active: boolean;
-  sort_order: number | null;
-  weekday: number | null;
-};
-
-const normalizeTaskName = (value: string | null | undefined) =>
-  (value ?? "").trim().toLowerCase();
-
-const getWeekdayFromDateString = (dateString: string) => {
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day).getDay();
+  is_rollover?: boolean | null;
 };
 
 const formatCompletedAt = (value: string | null) => {
   if (!value) return "";
   return new Date(value).toLocaleString();
 };
+
+const getStartOfWeek = (dateString: string) => {
+  const date = new Date(`${dateString}T12:00:00`);
+  const day = date.getDay();
+  const diff = date.getDate() - day;
+
+  const start = new Date(date);
+  start.setDate(diff);
+  start.setHours(0, 0, 0, 0);
+
+  return start;
+};
+
+const formatDisplayDate = (dateString: string) => {
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatWeekLabel = (dateString: string) => {
+  return `Week of ${formatDisplayDate(dateString)}`;
+};
+
+const formatDateForDB = (date: Date) => date.toISOString().slice(0, 10);
 
 export default async function ManagerPage(props: {
   searchParams?: SearchParams;
@@ -78,114 +86,75 @@ export default async function ManagerPage(props: {
     timeZone: "America/New_York",
   });
 
-  const startOfWeek = new Date();
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfSelectedWeek = getStartOfWeek(selectedDate);
+  const startOfSelectedWeekStr = formatDateForDB(startOfSelectedWeek);
 
-  const startOfWeekStr = startOfWeek.toLocaleDateString("en-CA", {
-    timeZone: "America/New_York",
-  });
+  const startOfCurrentWeek = getStartOfWeek(today);
+  const startOfCurrentWeekStr = formatDateForDB(startOfCurrentWeek);
 
-  let checklistQuery = supabase
-    .from("checklist_items")
-    .select("*")
-    .order("checklist_date", { ascending: false })
-    .order("id", { ascending: true });
+  let items: ChecklistItem[] = [];
+  let errorMessage = "";
 
   if (isSevenDayMode) {
-    checklistQuery = checklistQuery
+    const { data, error } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .order("checklist_date", { ascending: false })
+      .order("id", { ascending: true })
       .gte("checklist_date", sevenDaysAgoStr)
       .lte("checklist_date", today);
-  } else if (isThisWeekMode) {
-    checklistQuery = checklistQuery
-      .gte("checklist_date", startOfWeekStr)
-      .lte("checklist_date", today);
-  } else {
-    checklistQuery = checklistQuery.eq("checklist_date", selectedDate);
-  }
 
-  const { data: items, error } = await checklistQuery;
+    if (error) {
+      errorMessage = error.message;
+    } else {
+      items = (data || []) as ChecklistItem[];
+    }
+  } else if (isThisWeekMode) {
+    const { data, error } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .order("checklist_date", { ascending: false })
+      .order("id", { ascending: true })
+      .gte("checklist_date", startOfCurrentWeekStr)
+      .lte("checklist_date", today);
+
+    if (error) {
+      errorMessage = error.message;
+    } else {
+      items = (data || []) as ChecklistItem[];
+    }
+  } else {
+    const { data: dailyNightlyData, error: dailyNightlyError } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .order("id", { ascending: true })
+      .eq("checklist_date", selectedDate)
+      .in("task_section", ["Daily", "Nightly Closing"]);
+
+    const { data: weeklyData, error: weeklyError } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .order("id", { ascending: true })
+      .eq("checklist_date", startOfSelectedWeekStr)
+      .eq("task_section", "Weekly");
+
+    if (dailyNightlyError) {
+      errorMessage = dailyNightlyError.message;
+    } else if (weeklyError) {
+      errorMessage = weeklyError.message;
+    } else {
+      items = [
+        ...((dailyNightlyData || []) as ChecklistItem[]),
+        ...((weeklyData || []) as ChecklistItem[]),
+      ];
+    }
+  }
 
   const { data: teamMembers } = await supabase
     .from("team_members")
     .select("*")
     .eq("active", true)
     .order("sort_order", { ascending: true });
-
-  const { data: taskTemplates } = await supabase
-    .from("task_templates")
-    .select("*")
-    .eq("active", true)
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true });
-
-  const typedTaskTemplates = (taskTemplates || []) as TaskTemplate[];
-
-  const getScheduledWeeklySetForDate = (dateString: string) => {
-    const weekday = getWeekdayFromDateString(dateString);
-
-    return new Set(
-      typedTaskTemplates
-        .filter(
-          (template) =>
-            template.active &&
-            template.task_section === "Weekly" &&
-            template.weekday === weekday
-        )
-        .map((template) => normalizeTaskName(template.task_name))
-    );
-  };
-
-  const isExtraWeeklyTask = (item: ChecklistItem) => {
-    if (item.task_section !== "Weekly") return false;
-
-    const checklistWeekday = getWeekdayFromDateString(item.checklist_date);
-
-    if (
-      item.source_weekday !== null &&
-      item.source_weekday !== undefined &&
-      item.source_weekday !== checklistWeekday
-    ) {
-      return true;
-    }
-
-    const scheduledWeeklySet = getScheduledWeeklySetForDate(item.checklist_date);
-
-    return !scheduledWeeklySet.has(normalizeTaskName(item.task_name));
-  };
-
-  const TaskCard = ({ item }: { item: ChecklistItem }) => (
-    <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
-      <div className="text-lg font-semibold text-slate-50">{item.task_name}</div>
-
-      <div className="mt-1 text-sm text-slate-300">
-        Date: {item.checklist_date}
-      </div>
-
-      <div className="mt-1 text-sm text-slate-300">
-        Section: {item.task_section}
-      </div>
-
-      {item.source_weekday !== null && item.source_weekday !== undefined && (
-        <div className="mt-1 text-sm text-slate-400">
-          Source weekday: {item.source_weekday}
-        </div>
-      )}
-
-      <div className="mt-1 text-sm text-green-300">Status: Completed</div>
-
-      {item.employee_initials && (
-        <div className="mt-1 text-sm text-slate-300">
-          By: {item.employee_initials}
-        </div>
-      )}
-
-      {item.completed_at && (
-        <div className="mt-1 text-sm text-slate-400">
-          Completed at: {formatCompletedAt(item.completed_at)}
-        </div>
-      )}
-    </div>
-  );
 
   const navButtons = (
     <div className="flex flex-wrap gap-2">
@@ -208,12 +177,12 @@ export default async function ManagerPage(props: {
   );
 
   const subtitle = isSevenDayMode
-    ? `Viewing last 7 days (${sevenDaysAgoStr} to ${today})`
+    ? `Viewing last 7 days (${formatDisplayDate(sevenDaysAgoStr)} to ${formatDisplayDate(today)})`
     : isThisWeekMode
-    ? `Viewing this week (${startOfWeekStr} to ${today})`
-    : `Viewing checklist for ${selectedDate}`;
+    ? `Viewing this week (${formatWeekLabel(startOfCurrentWeekStr)})`
+    : `Viewing ${formatDisplayDate(selectedDate)} with ${formatWeekLabel(startOfSelectedWeekStr)}`;
 
-  if (error) {
+  if (errorMessage) {
     return (
       <main className="min-h-screen bg-slate-950 text-slate-100">
         <div className="border-b border-slate-800 bg-slate-950 px-6 py-4">
@@ -222,7 +191,13 @@ export default async function ManagerPage(props: {
               <h1 className="text-3xl font-bold text-slate-50">
                 Checklist History
               </h1>
-              <p className="mt-1 text-slate-300">{subtitle}</p>
+             <div className="mt-1 space-y-1">
+  <p className="text-slate-300">{subtitle}</p>
+
+  <p className="text-xs text-slate-400">
+    Daily & Nightly = selected date · Weekly = start of that week
+  </p>
+</div>
             </div>
             {navButtons}
           </div>
@@ -230,14 +205,14 @@ export default async function ManagerPage(props: {
 
         <div className="mx-auto max-w-6xl px-4 py-6">
           <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-slate-100 shadow-sm">
-            Error: {error.message}
+            Error: {errorMessage}
           </div>
         </div>
       </main>
     );
   }
 
-  const safeItems = (items || []) as ChecklistItem[];
+  const safeItems = items;
   const total = safeItems.length;
   const completed = safeItems.filter((i) => i.completed).length;
   const incomplete = total - completed;
@@ -245,37 +220,23 @@ export default async function ManagerPage(props: {
   const missedTasks = safeItems.filter((i) => !i.completed);
   const completedTasks = safeItems.filter((i) => i.completed);
 
-  const missedDaily = missedTasks.filter(
-    (item) => item.task_section === "Daily"
-  );
-
+  const missedDaily = missedTasks.filter((item) => item.task_section === "Daily");
   const missedNightly = missedTasks.filter(
     (item) => item.task_section === "Nightly Closing"
   );
-
-  const missedWeeklyScheduled = missedTasks.filter(
-    (item) => item.task_section === "Weekly" && !isExtraWeeklyTask(item)
-  );
-
-  const missedWeeklyExtra = missedTasks.filter(
-    (item) => item.task_section === "Weekly" && isExtraWeeklyTask(item)
-  );
+  const missedWeekly = missedTasks
+    .filter((item) => item.task_section === "Weekly")
+    .sort((a, b) => Number(b.is_rollover) - Number(a.is_rollover));
 
   const completedDaily = completedTasks.filter(
     (item) => item.task_section === "Daily"
   );
-
   const completedNightly = completedTasks.filter(
     (item) => item.task_section === "Nightly Closing"
   );
-
-  const completedWeeklyScheduled = completedTasks.filter(
-    (item) => item.task_section === "Weekly" && !isExtraWeeklyTask(item)
-  );
-
-  const completedWeeklyExtra = completedTasks.filter(
-    (item) => item.task_section === "Weekly" && isExtraWeeklyTask(item)
-  );
+  const completedWeekly = completedTasks
+    .filter((item) => item.task_section === "Weekly")
+    .sort((a, b) => Number(b.is_rollover) - Number(a.is_rollover));
 
   const initialsCounts: Record<string, number> = {};
 
@@ -373,6 +334,60 @@ export default async function ManagerPage(props: {
     b.localeCompare(a)
   );
 
+  const TaskCard = ({
+    item,
+    statusColor,
+  }: {
+    item: ChecklistItem;
+    statusColor: "green" | "red";
+  }) => (
+    <div
+      className={`rounded-xl border bg-slate-900 p-4 ${
+        item.task_section === "Weekly" && item.is_rollover
+          ? "border-red-500/40"
+          : "border-slate-700"
+      }`}
+    >
+      {item.task_section === "Weekly" && item.is_rollover && (
+        <div className="mb-2 inline-flex rounded-full border border-red-400/40 bg-red-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-200">
+          Rolled Over
+        </div>
+      )}
+
+      <div className="text-lg font-semibold text-slate-50">{item.task_name}</div>
+
+      <div className="mt-1 text-sm text-slate-300">
+        {item.task_section === "Weekly"
+          ? formatWeekLabel(item.checklist_date)
+          : `Date: ${formatDisplayDate(item.checklist_date)}`}
+      </div>
+
+      <div className="mt-1 text-sm text-slate-300">
+        Section: {item.task_section}
+      </div>
+
+      <div
+        className={`mt-1 text-sm ${
+          statusColor === "green" ? "text-green-300" : "text-red-300"
+        }`}
+      >
+        Status: {statusColor === "green" ? "Completed" : "Not completed"}
+      </div>
+
+      {item.employee_initials && (
+        <div className="mt-1 text-sm text-slate-300">
+          By: {item.employee_initials}
+        </div>
+      )}
+
+      {item.completed_at && (
+        <div className="mt-1 text-sm text-slate-400">
+          Completed at: {formatCompletedAt(item.completed_at)}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950 px-6 py-4">
@@ -390,7 +405,9 @@ export default async function ManagerPage(props: {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <AutoLogout />
 
-        <HistoryDateForm selectedDate={selectedDate} today={today} />
+        <div className="mb-6">
+  <HistoryDateForm selectedDate={selectedDate} today={today} />
+</div>
 
         <div className="mb-6 inline-flex rounded-2xl border border-slate-700 bg-slate-900 p-1 shadow-sm">
           <a
@@ -476,8 +493,8 @@ export default async function ManagerPage(props: {
               {isSevenDayMode
                 ? "Last 7 Days"
                 : isThisWeekMode
-                ? "This Week"
-                : selectedDate}
+                ? formatWeekLabel(startOfCurrentWeekStr)
+                : formatDisplayDate(selectedDate)}
             </div>
           </div>
 
@@ -602,10 +619,10 @@ export default async function ManagerPage(props: {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-              ? `Tasks not completed from ${sevenDaysAgoStr} to ${today}`
+              ? `Tasks not completed from ${formatDisplayDate(sevenDaysAgoStr)} to ${formatDisplayDate(today)}`
               : isThisWeekMode
-              ? `Tasks not completed from ${startOfWeekStr} to ${today}`
-              : `Tasks not completed for ${selectedDate}`}
+              ? `Tasks not completed for ${formatWeekLabel(startOfCurrentWeekStr)}`
+              : `Tasks not completed for ${formatDisplayDate(selectedDate)} with ${formatWeekLabel(startOfSelectedWeekStr)}`}
           </p>
 
           {missedTasks.length === 0 ? (
@@ -615,34 +632,40 @@ export default async function ManagerPage(props: {
           ) : (
             <div className="mt-4 space-y-6">
               <div>
+                <h3 className="mb-2 text-lg font-semibold text-green-300">
+                  Weekly · {formatWeekLabel(startOfSelectedWeekStr)}
+                </h3>
+                {missedWeekly.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No missed weekly tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {missedWeekly.map((item) => (
+                      <TaskCard
+                        key={`${item.checklist_date}-${item.id}`}
+                        item={item}
+                        statusColor="red"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <h3 className="mb-2 text-lg font-semibold text-blue-300">
-                  Daily
+                  Daily · {formatDisplayDate(selectedDate)}
                 </h3>
                 {missedDaily.length === 0 ? (
                   <div className="text-sm text-slate-400">No missed daily tasks.</div>
                 ) : (
                   <div className="space-y-3">
                     {missedDaily.map((item) => (
-                      <div
+                      <TaskCard
                         key={`${item.checklist_date}-${item.id}`}
-                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                      >
-                        <div className="text-lg font-semibold text-slate-50">
-                          {item.task_name}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Date: {item.checklist_date}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Section: {item.task_section}
-                        </div>
-
-                        <div className="mt-1 text-sm text-red-300">
-                          Status: Not completed
-                        </div>
-                      </div>
+                        item={item}
+                        statusColor="red"
+                      />
                     ))}
                   </div>
                 )}
@@ -650,7 +673,7 @@ export default async function ManagerPage(props: {
 
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-amber-300">
-                  Nightly Closing
+                  Nightly Closing · {formatDisplayDate(selectedDate)}
                 </h3>
                 {missedNightly.length === 0 ? (
                   <div className="text-sm text-slate-400">
@@ -659,105 +682,11 @@ export default async function ManagerPage(props: {
                 ) : (
                   <div className="space-y-3">
                     {missedNightly.map((item) => (
-                      <div
+                      <TaskCard
                         key={`${item.checklist_date}-${item.id}`}
-                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                      >
-                        <div className="text-lg font-semibold text-slate-50">
-                          {item.task_name}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Date: {item.checklist_date}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Section: {item.task_section}
-                        </div>
-
-                        <div className="mt-1 text-sm text-red-300">
-                          Status: Not completed
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="mb-2 text-lg font-semibold text-green-300">
-                  Weekly
-                </h3>
-                {missedWeeklyScheduled.length === 0 ? (
-                  <div className="text-sm text-slate-400">
-                    No missed scheduled weekly tasks.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {missedWeeklyScheduled.map((item) => (
-                      <div
-                        key={`${item.checklist_date}-${item.id}`}
-                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                      >
-                        <div className="text-lg font-semibold text-slate-50">
-                          {item.task_name}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Date: {item.checklist_date}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Section: {item.task_section}
-                        </div>
-
-                        <div className="mt-1 text-sm text-red-300">
-                          Status: Not completed
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="mb-2 text-lg font-semibold text-purple-300">
-                  Extra Weekly
-                </h3>
-                {missedWeeklyExtra.length === 0 ? (
-                  <div className="text-sm text-slate-400">
-                    No missed extra weekly tasks.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {missedWeeklyExtra.map((item) => (
-                      <div
-                        key={`${item.checklist_date}-${item.id}`}
-                        className="rounded-xl border border-slate-700 bg-slate-900 p-4"
-                      >
-                        <div className="text-lg font-semibold text-slate-50">
-                          {item.task_name}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Date: {item.checklist_date}
-                        </div>
-
-                        <div className="mt-1 text-sm text-slate-300">
-                          Section: {item.task_section}
-                        </div>
-
-                        {item.source_weekday !== null &&
-                          item.source_weekday !== undefined && (
-                            <div className="mt-1 text-sm text-slate-400">
-                              Source weekday: {item.source_weekday}
-                            </div>
-                          )}
-
-                        <div className="mt-1 text-sm text-red-300">
-                          Status: Not completed
-                        </div>
-                      </div>
+                        item={item}
+                        statusColor="red"
+                      />
                     ))}
                   </div>
                 )}
@@ -778,87 +707,87 @@ export default async function ManagerPage(props: {
 
           <p className="mt-2 text-slate-300">
             {isSevenDayMode
-              ? `Tasks completed from ${sevenDaysAgoStr} to ${today}`
+              ? `Tasks completed from ${formatDisplayDate(sevenDaysAgoStr)} to ${formatDisplayDate(today)}`
               : isThisWeekMode
-              ? `Tasks completed from ${startOfWeekStr} to ${today}`
-              : `Tasks completed for ${selectedDate}`}
+              ? `Tasks completed for ${formatWeekLabel(startOfCurrentWeekStr)}`
+              : `Tasks completed for ${formatDisplayDate(selectedDate)} with ${formatWeekLabel(startOfSelectedWeekStr)}`}
           </p>
 
           {completedTasks.length === 0 ? (
-  <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-300">
-    No completed tasks for this view.
-  </div>
-) : (
-  <div className="mt-4 space-y-6">
-    <div>
-      <h3 className="mb-2 text-lg font-semibold text-purple-300">
-        Extra Weekly
-      </h3>
-      {completedWeeklyExtra.length === 0 ? (
-        <div className="text-sm text-slate-400">
-          No extra weekly tasks completed.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {completedWeeklyExtra.map((item) => (
-            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div>
-      <h3 className="mb-2 text-lg font-semibold text-blue-300">
-        Daily
-      </h3>
-      {completedDaily.length === 0 ? (
-        <div className="text-sm text-slate-400">
-          No completed daily tasks.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {completedDaily.map((item) => (
-            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div>
-      <h3 className="mb-2 text-lg font-semibold text-amber-300">
-        Nightly Closing
-      </h3>
-      {completedNightly.length === 0 ? (
-        <div className="text-sm text-slate-400">
-          No completed nightly closing tasks.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {completedNightly.map((item) => (
-            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div>
-      <h3 className="mb-2 text-lg font-semibold text-green-300">
-        Weekly
-      </h3>
-      {completedWeeklyScheduled.length === 0 ? (
-        <div className="text-sm text-slate-400">
-          No scheduled weekly tasks completed.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {completedWeeklyScheduled.map((item) => (
-            <TaskCard key={`${item.checklist_date}-${item.id}`} item={item} />
-          ))}
-        </div>
-      )}
-    </div>
+            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-slate-300">
+              No completed tasks for this view.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-6">
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-green-300">
+                  Weekly · {formatDisplayDate(startOfSelectedWeekStr)}
+                </h3>
+                {completedWeekly.some((i) => i.is_rollover) && (
+  <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
+    ⚠ Includes rollover tasks from previous week
   </div>
 )}
+                {completedWeekly.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No completed weekly tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {completedWeekly.map((item) => (
+                      <TaskCard
+                        key={`${item.checklist_date}-${item.id}`}
+                        item={item}
+                        statusColor="green"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-blue-300">
+                  Daily
+                </h3>
+                {completedDaily.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No completed daily tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {completedDaily.map((item) => (
+                      <TaskCard
+                        key={`${item.checklist_date}-${item.id}`}
+                        item={item}
+                        statusColor="green"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold text-amber-300">
+                  Nightly Closing
+                </h3>
+                {completedNightly.length === 0 ? (
+                  <div className="text-sm text-slate-400">
+                    No completed nightly closing tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {completedNightly.map((item) => (
+                      <TaskCard
+                        key={`${item.checklist_date}-${item.id}`}
+                        item={item}
+                        statusColor="green"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </details>
 
         {(isSevenDayMode || isThisWeekMode) && sortedDates.length > 0 && (
@@ -867,7 +796,7 @@ export default async function ManagerPage(props: {
               <div className="flex items-center justify-between">
                 <span>Daily Breakdown</span>
                 <span className="text-sm font-medium text-slate-300">
-                  {sortedDates.length} days
+                  {sortedDates.length} dates
                 </span>
               </div>
             </summary>
@@ -888,7 +817,7 @@ export default async function ManagerPage(props: {
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div className="text-lg font-semibold text-slate-100">
-                        {date}
+                        {formatDisplayDate(date)}
                       </div>
                       <div className="text-sm text-slate-300">
                         {dateCompleted} / {dateTotal}
