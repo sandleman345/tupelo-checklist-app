@@ -8,13 +8,11 @@ type Props = {
 };
 
 export default function HistoryDateForm({ selectedDate, today }: Props) {
-  const [mounted, setMounted] = useState(false);
+  const [dateValue, setDateValue] = useState(selectedDate);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+    setDateValue(selectedDate);
+  }, [selectedDate]);
 
   return (
     <form className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:flex-row sm:items-end">
@@ -26,8 +24,9 @@ export default function HistoryDateForm({ selectedDate, today }: Props) {
           id="history-date"
           type="date"
           name="date"
-          defaultValue={selectedDate}
+          value={dateValue}
           max={today}
+          onChange={(e) => setDateValue(e.target.value)}
           className="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"
         />
       </div>

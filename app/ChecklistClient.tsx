@@ -24,6 +24,10 @@ const TEA_FACTS = [
     category: "Customer Tip",
     text: "Herbal teas are naturally caffeine-free and great for evening relaxation.",
   },
+  {
+    category: "Global",
+    text: "Tea is the second most consumed beverage in the world.",
+  },
 ];
 
 type ChecklistItem = {
@@ -78,9 +82,41 @@ type ChecklistClientProps = {
 
 const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
 
-const getTeaFactForToday = () => {
+function formatDisplayDate(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+
+  const dayName = date.toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const month = date.toLocaleDateString("en-US", {
+    month: "long",
+  });
+
+  const day = date.getDate();
+
+  const getOrdinal = (n: number) => {
+    if (n > 3 && n < 21) return "th";
+
+    switch (n % 10) {
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
+    }
+  };
+
+  return `🌿 ${dayName}, ${month} ${day}${getOrdinal(day)}`;
+}
+
+const getTeaFactForToday = (offset = 0) => {
   const today = new Date().toISOString().slice(0, 10);
-  const index = new Date(today).getDate() % TEA_FACTS.length;
+  const baseIndex = new Date(today).getDate() % TEA_FACTS.length;
+  const index = (baseIndex + offset) % TEA_FACTS.length;
   return TEA_FACTS[index];
 };
 
@@ -88,7 +124,8 @@ export default function ChecklistClient({
   initialItems,
   teamMembers,
 }: ChecklistClientProps) {
-  const todayFact = getTeaFactForToday();
+  const [teaFactOffset, setTeaFactOffset] = useState(0);
+  const todayFact = getTeaFactForToday(teaFactOffset);
 
   const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [toastMessage, setToastMessage] = useState("");
@@ -756,7 +793,7 @@ export default function ChecklistClient({
             </p>
 
             <div className="mt-2 text-sm text-slate-300">
-              Checklist Date: {checklistDate}
+              {formatDisplayDate(checklistDate)}
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -811,12 +848,25 @@ export default function ChecklistClient({
           className="mx-auto max-w-5xl space-y-8 px-4 py-6"
         >
           <div className="rounded-3xl border border-amber-300/30 bg-amber-500/10 p-4 shadow-xl shadow-black/15 backdrop-blur-xl">
-            <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               <div className="text-lg font-semibold text-amber-200">
                 ☕ Today’s Tea Fact
               </div>
-              <div className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
-                {todayFact.category}
+
+              <div className="flex items-center gap-2">
+                <div className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+                  {todayFact.category}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTeaFactOffset((prev) => (prev + 1) % TEA_FACTS.length)
+                  }
+                  className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200 transition hover:bg-amber-400/20"
+                >
+                  New Tea Fact
+                </button>
               </div>
             </div>
 
