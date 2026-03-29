@@ -3,6 +3,29 @@
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+const TEA_FACTS = [
+  {
+    category: "Tea Fact",
+    text: "Green tea and black tea come from the same plant. The difference is how the leaves are processed.",
+  },
+  {
+    category: "Health Note",
+    text: "Tea contains antioxidants that may support heart health and reduce inflammation.",
+  },
+  {
+    category: "Brewing Tip",
+    text: "Green tea should be brewed at lower temperatures to avoid bitterness.",
+  },
+  {
+    category: "Tea History",
+    text: "Tea was discovered in China over 4,000 years ago.",
+  },
+  {
+    category: "Customer Tip",
+    text: "Herbal teas are naturally caffeine-free and great for evening relaxation.",
+  },
+];
+
 type ChecklistItem = {
   id: number;
   checklist_date: string;
@@ -55,10 +78,18 @@ type ChecklistClientProps = {
 
 const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
 
+const getTeaFactForToday = () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const index = new Date(today).getDate() % TEA_FACTS.length;
+  return TEA_FACTS[index];
+};
+
 export default function ChecklistClient({
   initialItems,
   teamMembers,
 }: ChecklistClientProps) {
+  const todayFact = getTeaFactForToday();
+
   const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [toastMessage, setToastMessage] = useState("");
   const [bigPraiseMessage, setBigPraiseMessage] = useState("");
@@ -547,8 +578,9 @@ export default function ChecklistClient({
     }
 
     if (item.task_section === "Daily") return "border-blue-300/25 bg-blue-500/10";
-    if (item.task_section === "Nightly Closing")
+    if (item.task_section === "Nightly Closing") {
       return "border-amber-300/25 bg-amber-400/10";
+    }
     if (item.task_section === "Weekly") return "border-green-300/25 bg-green-500/10";
     return "border-white/10 bg-white/5";
   };
@@ -778,6 +810,23 @@ export default function ChecklistClient({
           id="checklist-sections"
           className="mx-auto max-w-5xl space-y-8 px-4 py-6"
         >
+          <div className="rounded-3xl border border-amber-300/30 bg-amber-500/10 p-4 shadow-xl shadow-black/15 backdrop-blur-xl">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="text-lg font-semibold text-amber-200">
+                ☕ Today’s Tea Fact
+              </div>
+              <div className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+                {todayFact.category}
+              </div>
+            </div>
+
+            <div className="text-base text-slate-100">{todayFact.text}</div>
+
+            <div className="mt-2 text-xs text-slate-300">
+              A quick tea tip for the team today.
+            </div>
+          </div>
+
           {SECTION_ORDER.map((section) => {
             const sectionItems = items
               .filter((item) => item.task_section === section)

@@ -1,11 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 type Props = {
   selectedDate: string;
   today: string;
 };
 
 export default function HistoryDateForm({ selectedDate, today }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <form className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-sm sm:flex-row sm:items-end">
       <div>
