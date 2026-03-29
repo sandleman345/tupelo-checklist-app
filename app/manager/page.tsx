@@ -191,13 +191,7 @@ export default async function ManagerPage(props: {
               <h1 className="text-3xl font-bold text-slate-50">
                 Checklist History
               </h1>
-             <div className="mt-1 space-y-1">
-  <p className="text-slate-300">{subtitle}</p>
-
-  <p className="text-xs text-slate-400">
-    Daily & Nightly = selected date · Weekly = start of that week
-  </p>
-</div>
+              <p className="mt-1 text-slate-300">{subtitle}</p>
             </div>
             {navButtons}
           </div>
@@ -396,7 +390,13 @@ export default async function ManagerPage(props: {
             <h1 className="text-3xl font-bold text-slate-50">
               Checklist History
             </h1>
-            <p className="mt-1 text-slate-300">{subtitle}</p>
+
+            <div className="mt-1 space-y-1">
+              <p className="text-slate-300">{subtitle}</p>
+              <p className="text-xs text-slate-400">
+                Daily & Nightly = selected date · Weekly = start of that week
+              </p>
+            </div>
           </div>
           {navButtons}
         </div>
@@ -406,8 +406,8 @@ export default async function ManagerPage(props: {
         <AutoLogout />
 
         <div className="mb-6">
-  <HistoryDateForm selectedDate={selectedDate} today={today} />
-</div>
+          <HistoryDateForm selectedDate={selectedDate} today={today} />
+        </div>
 
         <div className="mb-6 inline-flex rounded-2xl border border-slate-700 bg-slate-900 p-1 shadow-sm">
           <a
@@ -633,8 +633,13 @@ export default async function ManagerPage(props: {
             <div className="mt-4 space-y-6">
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-green-300">
-                  Weekly · {formatWeekLabel(startOfSelectedWeekStr)}
+                  Weekly · Week of {formatDisplayDate(startOfSelectedWeekStr)}
                 </h3>
+                {missedWeekly.some((i) => i.is_rollover) && (
+                  <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
+                    ⚠ Rollover tasks must be completed first
+                  </div>
+                )}
                 {missedWeekly.length === 0 ? (
                   <div className="text-sm text-slate-400">
                     No missed weekly tasks.
@@ -673,7 +678,7 @@ export default async function ManagerPage(props: {
 
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-amber-300">
-                  Nightly Closing · {formatDisplayDate(selectedDate)}
+                  Nightly · {formatDisplayDate(selectedDate)}
                 </h3>
                 {missedNightly.length === 0 ? (
                   <div className="text-sm text-slate-400">
@@ -721,13 +726,13 @@ export default async function ManagerPage(props: {
             <div className="mt-4 space-y-6">
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-green-300">
-                  Weekly · {formatDisplayDate(startOfSelectedWeekStr)}
+                  Weekly · Week of {formatDisplayDate(startOfSelectedWeekStr)}
                 </h3>
                 {completedWeekly.some((i) => i.is_rollover) && (
-  <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
-    ⚠ Includes rollover tasks from previous week
-  </div>
-)}
+                  <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
+                    ⚠ Includes rollover tasks from previous week
+                  </div>
+                )}
                 {completedWeekly.length === 0 ? (
                   <div className="text-sm text-slate-400">
                     No completed weekly tasks.
@@ -747,7 +752,7 @@ export default async function ManagerPage(props: {
 
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-blue-300">
-                  Daily
+                  Daily · {formatDisplayDate(selectedDate)}
                 </h3>
                 {completedDaily.length === 0 ? (
                   <div className="text-sm text-slate-400">
@@ -768,7 +773,7 @@ export default async function ManagerPage(props: {
 
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-amber-300">
-                  Nightly Closing
+                  Nightly · {formatDisplayDate(selectedDate)}
                 </h3>
                 {completedNightly.length === 0 ? (
                   <div className="text-sm text-slate-400">
