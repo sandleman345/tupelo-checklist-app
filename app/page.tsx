@@ -208,6 +208,9 @@ export default async function Home() {
     .eq("active", true)
     .order("sort_order", { ascending: true });
 
+    console.log("team members query result:", teamMembers);
+console.log("team members query error:", teamError);
+
   if (teamError) {
     console.error("Error loading team members:", teamError.message);
   }

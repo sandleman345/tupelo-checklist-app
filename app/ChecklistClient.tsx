@@ -144,14 +144,6 @@ export default function ChecklistClient({
     Weekly: false,
   });
 
-  const [showCompletedSections, setShowCompletedSections] = useState<
-    Record<string, boolean>
-  >({
-    Daily: false,
-    "Nightly Closing": false,
-    Weekly: false,
-  });
-
   const visibleTeamMembers = useMemo(() => {
     return [...teamMembers]
       .filter((member) => member.active)
@@ -160,13 +152,6 @@ export default function ChecklistClient({
 
   const toggleSection = (section: string) => {
     setOpenSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
-  const toggleShowCompleted = (section: string) => {
-    setShowCompletedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
@@ -502,6 +487,7 @@ export default function ChecklistClient({
     const cleanedInitials = initialsValue.toUpperCase().trim();
     const isCompleted = cleanedInitials.length > 0;
     const completedAt = isCompleted ? new Date().toISOString() : null;
+    const previousItems = items;
 
     const updatedItems = items.map((item) =>
       item.id === id
@@ -553,7 +539,8 @@ export default function ChecklistClient({
       .eq("id", id);
 
     if (error) {
-      setItems(items);
+      setItems(previousItems);
+      alert(`Could not save initials: ${error.message}`);
       console.error("Failed to update checklist item:", error);
     }
   };
@@ -901,20 +888,12 @@ export default function ChecklistClient({
                 return bRollover - aRollover;
               });
 
-            const visibleSectionItems = sectionItems.filter(
-              (item) => !item.completed
-            );
-            const completedSectionItems = sectionItems.filter(
-              (item) => item.completed
-            );
-
             if (sectionItems.length === 0) return null;
 
             const stats = getSectionStats(section);
-            const remainingCount = visibleSectionItems.length;
+            const remainingCount = sectionItems.filter((item) => !item.completed).length;
             const isSectionComplete =
               sectionItems.length > 0 && remainingCount === 0;
-            const showCompleted = showCompletedSections[section] ?? false;
 
             return (
               <section
@@ -973,7 +952,9 @@ export default function ChecklistClient({
                 {openSections[section] && (
                   <div className="space-y-4">
                     {section === "Weekly" &&
-                      visibleSectionItems.some((item) => item.is_rollover) && (
+                      sectionItems.some(
+                        (item) => item.is_rollover && !item.completed
+                      ) && (
                         <div className="rounded-2xl border border-red-400/45 bg-red-500/12 px-4 py-3 text-sm font-semibold text-red-200">
                           Rolled over from last week — must be completed first.
                         </div>
@@ -983,121 +964,84 @@ export default function ChecklistClient({
                       <div className="rounded-2xl border border-green-400/30 bg-green-500/10 px-4 py-4 text-sm font-semibold text-green-200">
                         {section} complete ✅
                       </div>
-                    ) : (
-                      visibleSectionItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
-                            item
-                          )}`}
-                        >
-                          {section === "Weekly" && item.is_rollover && (
-                            <div className="mb-3 inline-flex rounded-full border border-red-300/40 bg-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-200">
-                              Rolled Over · High Priority
+                    ) : null}
+
+                    {sectionItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
+                          item
+                        )}`}
+                      >
+                        {section === "Weekly" && item.is_rollover && (
+                          <div className="mb-3 inline-flex rounded-full border border-red-300/40 bg-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-200">
+                            {item.completed
+                              ? "Rolled Over · Completed"
+                              : "Rolled Over · High Priority"}
+                          </div>
+                        )}
+
+                        <div className="text-xl font-semibold text-slate-50">
+                          {item.task_name}
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-4">
+                          <div
+                            className={`text-lg font-medium ${
+                              item.completed
+                                ? getCompletedTextColor(item.task_section)
+                                : "text-slate-100"
+                            }`}
+                          >
+                            {item.completed ? "Completed" : "Not completed"}
+                          </div>
+
+                          {item.completed && item.employee_initials && (
+                            <div className="text-sm text-slate-300">
+                              Completed by: {item.employee_initials}
                             </div>
                           )}
 
-                          <div className="text-xl font-semibold text-slate-50">
-                            {item.task_name}
-                          </div>
-
-                          <div className="mt-4 flex flex-col gap-4">
-                            <div className="text-lg font-medium text-slate-100">
-                              Not completed
+                          {item.completed && item.completed_at && (
+                            <div className="text-sm text-slate-300">
+                              Completed at:{" "}
+                              {new Date(item.completed_at).toLocaleString()}
                             </div>
+                          )}
 
-                            <div className="flex flex-wrap gap-3">
-                              {visibleTeamMembers.map((member) => {
-                                const isSelected =
-                                  item.employee_initials === member.initials;
+                          <div className="flex flex-wrap gap-3">
+                            {visibleTeamMembers.map((member) => {
+                              const isSelected =
+                                item.employee_initials === member.initials;
 
-                                return (
-                                  <button
-                                    key={member.id}
-                                    type="button"
-                                    title={member.name || member.initials}
-                                    disabled={isReadOnly}
-                                    onClick={() =>
-                                      updateInitials(
-                                        item.id,
-                                        isSelected ? "" : member.initials
-                                      )
-                                    }
-                                    className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold tracking-wide transition-all ${
-                                      isSelected
-                                        ? getSelectedMemberButtonClasses(
-                                            item.task_section
-                                          )
-                                        : "border-white/10 bg-white/10 text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/15"
-                                    } ${isReadOnly ? "opacity-70" : ""}`}
-                                  >
-                                    {member.initials}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                              return (
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  title={member.name || member.initials}
+                                  disabled={isReadOnly}
+                                  onClick={() =>
+                                    updateInitials(
+                                      item.id,
+                                      isSelected ? "" : member.initials
+                                    )
+                                  }
+                                  className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-xl font-bold tracking-wide transition-all ${
+                                    isSelected
+                                      ? getSelectedMemberButtonClasses(
+                                          item.task_section
+                                        )
+                                      : "border-white/10 bg-white/10 text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/15"
+                                  } ${isReadOnly ? "opacity-70" : ""}`}
+                                >
+                                  {member.initials}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
-                      ))
-                    )}
-
-                    {completedSectionItems.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => toggleShowCompleted(section)}
-                        className="text-sm font-medium text-slate-300 underline underline-offset-4 transition hover:text-slate-100"
-                      >
-                        {showCompleted
-                          ? `Hide completed (${completedSectionItems.length})`
-                          : `Show completed (${completedSectionItems.length})`}
-                      </button>
-                    )}
-
-                    {showCompleted && completedSectionItems.length > 0 && (
-                      <div className="space-y-4">
-                        {completedSectionItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`rounded-3xl border p-4 shadow-lg shadow-black/15 backdrop-blur-xl ${getCompletedCardColor(
-                              item
-                            )}`}
-                          >
-                            {section === "Weekly" && item.is_rollover && (
-                              <div className="mb-3 inline-flex rounded-full border border-red-300/40 bg-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-200">
-                                Rolled Over · Completed
-                              </div>
-                            )}
-
-                            <div className="text-xl font-semibold text-slate-50">
-                              {item.task_name}
-                            </div>
-
-                            <div className="mt-4 flex flex-col gap-3">
-                              <div
-                                className={`text-lg font-medium ${getCompletedTextColor(
-                                  item.task_section
-                                )}`}
-                              >
-                                Completed
-                              </div>
-
-                              {item.employee_initials && (
-                                <div className="text-sm text-slate-300">
-                                  Completed by: {item.employee_initials}
-                                </div>
-                              )}
-
-                              {item.completed_at && (
-                                <div className="text-sm text-slate-300">
-                                  Completed at:{" "}
-                                  {new Date(item.completed_at).toLocaleString()}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </section>
