@@ -60,7 +60,10 @@ export default async function Home() {
     .order("id", { ascending: true });
 
   if (existingWeeklyError) {
-    console.error("Error loading weekly checklist items:", existingWeeklyError.message);
+    console.error(
+      "Error loading weekly checklist items:",
+      existingWeeklyError.message
+    );
   }
 
   const { data: templates, error: templatesLoadError } = await supabase
@@ -171,7 +174,10 @@ export default async function Home() {
         .insert(weeklyItemsToInsert);
 
       if (insertError) {
-        console.error("Error creating this week's weekly checklist:", insertError.message);
+        console.error(
+          "Error creating this week's weekly checklist:",
+          insertError.message
+        );
       }
     }
   }
@@ -199,7 +205,10 @@ export default async function Home() {
     .order("id", { ascending: true });
 
   if (refreshedWeeklyError) {
-    console.error("Error reloading weekly checklist items:", refreshedWeeklyError.message);
+    console.error(
+      "Error reloading weekly checklist items:",
+      refreshedWeeklyError.message
+    );
   }
 
   const { data: teamMembers, error: teamError } = await supabase
@@ -207,9 +216,6 @@ export default async function Home() {
     .select("*")
     .eq("active", true)
     .order("sort_order", { ascending: true });
-
-    console.log("team members query result:", teamMembers);
-console.log("team members query error:", teamError);
 
   if (teamError) {
     console.error("Error loading team members:", teamError.message);
@@ -226,6 +232,17 @@ console.log("team members query error:", teamError);
     console.error("Error loading task templates:", templatesError.message);
   }
 
+  const { data: managerNote, error: managerNoteError } = await supabase
+    .from("manager_notes")
+    .select("*")
+    .eq("note_date", today)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (managerNoteError) {
+    console.error("Error loading manager note:", managerNoteError.message);
+  }
+
   const initialItems = [
     ...(refreshedDailyNightly ?? []),
     ...(refreshedWeekly ?? []),
@@ -236,6 +253,7 @@ console.log("team members query error:", teamError);
       initialItems={initialItems}
       teamMembers={teamMembers ?? []}
       taskTemplates={taskTemplates ?? []}
+      managerNote={managerNote ?? null}
     />
   );
 }

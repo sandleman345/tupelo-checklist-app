@@ -74,10 +74,19 @@ type TaskTemplate = {
   weekday: number | null;
 };
 
+type ManagerNote = {
+  id: number;
+  note_date: string;
+  note_text: string | null;
+  is_active: boolean;
+  updated_at: string;
+};
+
 type ChecklistClientProps = {
   initialItems: ChecklistItem[];
   teamMembers: TeamMember[];
   taskTemplates: TaskTemplate[];
+  managerNote: ManagerNote | null;
 };
 
 const SECTION_ORDER = ["Daily", "Nightly Closing", "Weekly"] as const;
@@ -123,6 +132,7 @@ const getTeaFactForToday = (offset = 0) => {
 export default function ChecklistClient({
   initialItems,
   teamMembers,
+  managerNote,
 }: ChecklistClientProps) {
   const [teaFactOffset, setTeaFactOffset] = useState(0);
   const todayFact = getTeaFactForToday(teaFactOffset);
@@ -137,6 +147,7 @@ export default function ChecklistClient({
     text: "text-green-300",
     bg: "bg-slate-900/95",
   });
+  const [showManagerNote, setShowManagerNote] = useState(true);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Daily: false,
@@ -849,6 +860,30 @@ export default function ChecklistClient({
           id="checklist-sections"
           className="mx-auto max-w-5xl space-y-8 px-4 py-6"
         >
+          {managerNote?.note_text && (
+            <div className="rounded-3xl border border-sky-300/30 bg-sky-500/10 p-4 shadow-xl shadow-black/15 backdrop-blur-xl">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-lg font-semibold text-sky-200">
+                  📌 Manager Note
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowManagerNote((prev) => !prev)}
+                  className="rounded-full border border-sky-300/30 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200 transition hover:bg-sky-400/20"
+                >
+                  {showManagerNote ? "Hide Note" : "Show Note"}
+                </button>
+              </div>
+
+              {showManagerNote && (
+                <div className="text-base text-slate-100">
+                  {managerNote.note_text}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="rounded-3xl border border-amber-300/30 bg-amber-500/10 p-4 shadow-xl shadow-black/15 backdrop-blur-xl">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               <div className="text-lg font-semibold text-amber-200">
