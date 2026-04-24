@@ -15,14 +15,6 @@ type ChecklistHistoryItem = {
   is_rollover?: boolean | null;
 };
 
-type ManagerNote = {
-  id: number;
-  note_date: string;
-  note_text: string | null;
-  is_active: boolean;
-  updated_at: string;
-};
-
 function formatDisplayDate(dateString: string) {
   const date = new Date(`${dateString}T12:00:00`);
 
@@ -91,6 +83,26 @@ export default function ManagerPage() {
     loadPageData();
   }, [selectedDate]);
 
+  const completedItems = useMemo(() => {
+    return items.filter((item) => item.completed);
+  }, [items]);
+
+  const employeeTallies = useMemo(() => {
+    const tallyMap: Record<string, number> = {};
+
+    completedItems.forEach((item) => {
+      const initials = item.employee_initials?.trim().toUpperCase();
+
+      if (!initials) return;
+
+      tallyMap[initials] = (tallyMap[initials] || 0) + 1;
+    });
+
+    return Object.entries(tallyMap)
+      .map(([initials, count]) => ({ initials, count }))
+      .sort((a, b) => b.count - a.count || a.initials.localeCompare(b.initials));
+  }, [completedItems]);
+
   const groupedItems = useMemo(() => {
     return {
       Weekly: items.filter((item) => item.task_section === "Weekly"),
@@ -152,7 +164,7 @@ export default function ManagerPage() {
             <div>
               <h1 className="text-3xl font-bold text-slate-50">Manager Page</h1>
               <p className="mt-1 text-slate-300">
-                Review tasks and manage the daily note banner.
+                Review tasks, employee tallies, and manage the daily note banner.
               </p>
             </div>
 
@@ -221,6 +233,62 @@ export default function ManagerPage() {
           )}
         </div>
 
+        <div className="rounded-3xl border border-emerald-300/25 bg-emerald-500/10 p-5 shadow-xl shadow-black/15 backdrop-blur-xl">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xl font-semibold text-emerald-200">
+                Employee Initials Report
+              </div>
+              <div className="mt-1 text-sm text-slate-300">
+                Completed task totals for {formatDisplayDate(selectedDate)}.
+              </div>
+            </div>
+
+            <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-sm text-slate-200">
+              Completed: {completedItems.length} / {items.length}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-slate-300">Loading tallies...</div>
+          ) : employeeTallies.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-slate-300">
+              No completed tasks with initials for this date yet.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {employeeTallies.map((employee) => (
+                <div
+                  key={employee.initials}
+                  className="rounded-2xl border border-white/10 bg-slate-950/35 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-2xl font-bold text-emerald-100">
+                      {employee.initials}
+                    </div>
+
+                    <div className="rounded-full border border-emerald-300/30 bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-200">
+                      {employee.count} tasks
+                    </div>
+                  </div>
+
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-emerald-300/70"
+                      style={{
+                        width: `${Math.max(
+                          8,
+                          Math.round((employee.count / completedItems.length) * 100)
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-xl shadow-black/15 backdrop-blur-xl">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -252,9 +320,15 @@ export default function ManagerPage() {
                 return (
                   <section
                     key={section}
-                    className={`rounded-3xl border p-4 ${getSectionBorder(section)} bg-white/5`}
+                    className={`rounded-3xl border p-4 ${getSectionBorder(
+                      section
+                    )} bg-white/5`}
                   >
-                    <div className={`mb-4 text-lg font-semibold ${getSectionText(section)}`}>
+                    <div
+                      className={`mb-4 text-lg font-semibold ${getSectionText(
+                        section
+                      )}`}
+                    >
                       {section}
                     </div>
 
@@ -289,9 +363,7 @@ export default function ManagerPage() {
                           </div>
 
                           <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
-                            <div>
-                              Initials: {item.employee_initials || "—"}
-                            </div>
+                            <div>Initials: {item.employee_initials || "—"}</div>
                             <div>
                               Completed at:{" "}
                               {item.completed_at
